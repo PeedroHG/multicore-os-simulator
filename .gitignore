@@ -1,0 +1,9 @@
+*.exe
+*.o
+*.out
+/simulador
+.vscode/
+.idea/
+build/
+output.dat
+log/

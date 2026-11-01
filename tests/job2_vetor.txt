@@ -1,0 +1,15 @@
+// ===================================================
+// Job 2: Operações Aritméticas e Lógicas (SUB, AND, STORE)
+// Testa diferentes opcodes e múltiplos registradores
+// ===================================================
+100D // LOAD R0, [0x0D] (Carrega X = 20 para R0)
+110E // LOAD R1, [0x0E] (Carrega Y = 8 para R1)
+4201 // SUB  R2, R0, R1 (R2 = X - Y = 12 / 0x000C)
+5301 // AND  R3, R0, R1 (R3 = X & Y = 0x14 & 0x08 = 0x0000)
+320F // STORE R2, [0x0F] (Salva R2 no endereço 0x0F)
+F000 // HALT (Finaliza a execução do Job 2)
+
+.data
+0D 0014 // Variável X = 20 (0x0014)
+0E 0008 // Variável Y = 8  (0x0008)
+0F 0000 // Variável Resultado = 0

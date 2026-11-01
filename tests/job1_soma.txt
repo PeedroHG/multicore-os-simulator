@@ -1,0 +1,14 @@
+// ===================================================
+// Job 1: Soma de A e B (C = A + B)
+// Especificação conforme Seção 4 do PDF (Prática 0-1)
+// ===================================================
+100A // LOAD R0, [0x0A] (Carrega A = 5 para R0)
+110B // LOAD R1, [0x0B] (Carrega B = 7 para R1)
+2201 // ADD  R2, R0, R1 (R2 = A + B = 12 / 0x000C)
+320C // STORE R2, [0x0C] (Salva R2 no endereço C)
+F000 // HALT (Finaliza a execução do Job 1)
+
+.data
+0A 0005 // Variável A = 5
+0B 0007 // Variável B = 7
+0C 0000 // Variável C = 0 (armazena o resultado)
