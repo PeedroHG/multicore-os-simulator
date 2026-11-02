@@ -7,13 +7,13 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 ## 👤 Pessoa 1: Kernel (Lockstep), Multicore, PCB, Context Switch & CLI
 
 ### Fase 1: Interfaces e Estruturas de Dados (até 08/11)
-- [ ] Criar o arquivo `src/pcb.hpp` reaproveitando `CPUContext` de `src/cpu/registers/register_bank.hpp`:
-  - [ ] Campos de identificação: `int pid`, `std::string nomeArquivo`.
-  - [ ] Estados do processo: `enum class EstadoProcesso { NOVO, PRONTO, EXECUTANDO, FINALIZADO, ABORTADO }` (sem BLOQUEADO, falta de página gera *stall*).
-  - [ ] Contexto de hardware: `CPUContext contexto` e `bool halted` (para salvar o `haltStatus` da UC).
-  - [ ] Parâmetros de escalonamento: `int prioridadeBase`, `int prioridadeEfetiva`, `uint32_t estimativa`, `uint32_t instrucoesExecutadas`, `uint32_t quantumUsado`.
-  - [ ] Tabela de páginas por processo: `std::vector<EntradaPagina> tabelaPaginas`.
-  - [ ] Contadores e métricas de tempo: `cicloInicio`, `cicloFim`, `ultimoEntrouPronto`, `ciclosEspera`, `ciclosExecucao`, `ciclosStall`, `trocasContexto`, `faltasPagina`, `ultimoCore`.
+- [x] Criar o arquivo `src/pcb.hpp` reaproveitando `CPUContext` de `src/cpu/registers/register_bank.hpp`:
+  - [x] Campos de identificação: `int pid`, `std::string nomeArquivo`.
+  - [x] Estados do processo: `enum class EstadoProcesso { NOVO, PRONTO, EXECUTANDO, FINALIZADO, ABORTADO }` (sem BLOQUEADO, falta de página gera *stall*).
+  - [x] Contexto de hardware: `CPUContext contexto` e `bool halted` (para salvar o `haltStatus` da UC).
+  - [x] Parâmetros de escalonamento: `int prioridadeBase`, `int prioridadeEfetiva`, `uint32_t estimativa`, `uint32_t instrucoesExecutadas`, `uint32_t quantumUsado`.
+  - [x] Tabela de páginas por processo: `std::vector<EntradaPagina> tabelaPaginas`.
+  - [x] Contadores e métricas de tempo: `cicloInicio`, `cicloFim`, `ultimoEntrouPronto`, `ciclosEspera`, `ciclosExecucao`, `ciclosStall`, `trocasContexto`, `faltasPagina`, `ultimoCore`.
 - [ ] Definir a interface de salvamento/restauração de contexto em `src/cpu/cpu.hpp` (`salvarContexto(PCB&)` e `restaurarContexto(const PCB&)`).
 - [ ] Definir a interface do `Kernel` em `src/kernel.hpp` contendo o laço central de simulação em lockstep com `uint64_t tick` único.
 - [ ] Criar a tag Git do baseline para comparações experimentais futuras: `git tag v1-baseline 3351311`.
