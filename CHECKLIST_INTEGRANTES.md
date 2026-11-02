@@ -32,9 +32,9 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [ ] Tratar penalidades de *stall* (falta de página) e custos de troca de contexto (`CUSTO_TROCA`, padrão 5 ciclos, apenas se o PID mudar).
   - [ ] Atualizar contadores de estado de cada PCB (`ciclosEspera` para quem está na fila de prontos; `ciclosExecucao`/`ciclosStall` para quem está nos núcleos).
   - [ ] Integrar proteção contra laços infinitos (`LIMITE_INSTRUCOES_POR_JOB`).
-- [ ] Adaptar `loader/batch_manager.cpp` e `main.cpp`:
-  - [ ] Implementar parsing dos argumentos de linha de comando (`--cores`, `--politica`, `--modo`, `--quantum`, `--substituicao`, `--molduras`, `--penalidade-falta`, `--custo-troca`, `--aging`, `--saida`).
-  - [ ] Substituir o uso da classe legada/morta `SistemaOperacional` pelo novo `Kernel`.
+- [x] Adaptar `loader/batch_manager.cpp` e `main.cpp`:
+  - [x] Implementar parsing dos argumentos de linha de comando (`--cores`, `--politica`, `--modo`, `--quantum`, `--substituicao`, `--molduras`, `--penalidade-falta`, `--custo-troca`, `--aging`, `--saida`).
+  - [x] Substituir o uso da classe legada/morta `SistemaOperacional` pelo novo `Kernel`.
 
 ### Fase 3: Integração e Validação (até 29/11)
 - [ ] Criar teste de regressão e validação multicore (`tests/test_multicore.cpp`):

@@ -25,6 +25,7 @@ TARGET    := simulador
 COMMON_SRCS := \
     $(SRC_DIR)/so.cpp \
     $(SRC_DIR)/kernel.cpp \
+    $(SRC_DIR)/config.cpp \
     $(SRC_DIR)/memory.cpp \
     $(CONTROL_DIR)/control_unit.cpp \
     $(CPU_DIR)/cpu.cpp \
