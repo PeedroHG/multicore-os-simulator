@@ -68,6 +68,9 @@ public:
   /** Reinicia a Unidade de Controle (limpa a flag de HALT). */
   void reset();
 
+  /** Define explicitamente o status de HALT (usado na restauração de contexto). */
+  void setHalted(bool status) { haltStatus = status; }
+
   /** Retorna true se a UC processou um HALT (job atual finalizado). */
   bool isHalted() const;
 

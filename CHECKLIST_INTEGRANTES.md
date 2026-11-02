@@ -14,7 +14,7 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [x] Parâmetros de escalonamento: `int prioridadeBase`, `int prioridadeEfetiva`, `uint32_t estimativa`, `uint32_t instrucoesExecutadas`, `uint32_t quantumUsado`.
   - [x] Tabela de páginas por processo: `std::vector<EntradaPagina> tabelaPaginas`.
   - [x] Contadores e métricas de tempo: `cicloInicio`, `cicloFim`, `ultimoEntrouPronto`, `ciclosEspera`, `ciclosExecucao`, `ciclosStall`, `trocasContexto`, `faltasPagina`, `ultimoCore`.
-- [ ] Definir a interface de salvamento/restauração de contexto em `src/cpu/cpu.hpp` (`salvarContexto(PCB&)` e `restaurarContexto(const PCB&)`).
+- [x] Definir a interface de salvamento/restauração de contexto em `src/cpu/cpu.hpp` (`salvarContexto(PCB&)` e `restaurarContexto(const PCB&)`).
 - [ ] Definir a interface do `Kernel` em `src/kernel.hpp` contendo o laço central de simulação em lockstep com `uint64_t tick` único.
 - [ ] Criar a tag Git do baseline para comparações experimentais futuras: `git tag v1-baseline 3351311`.
 
