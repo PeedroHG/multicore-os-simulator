@@ -15,7 +15,7 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [x] Tabela de páginas por processo: `std::vector<EntradaPagina> tabelaPaginas`.
   - [x] Contadores e métricas de tempo: `cicloInicio`, `cicloFim`, `ultimoEntrouPronto`, `ciclosEspera`, `ciclosExecucao`, `ciclosStall`, `trocasContexto`, `faltasPagina`, `ultimoCore`.
 - [x] Definir a interface de salvamento/restauração de contexto em `src/cpu/cpu.hpp` (`salvarContexto(PCB&)` e `restaurarContexto(const PCB&)`).
-- [ ] Definir a interface do `Kernel` em `src/kernel.hpp` contendo o laço central de simulação em lockstep com `uint64_t tick` único.
+- [x] Definir a interface do `Kernel` em `src/kernel.hpp` contendo o laço central de simulação em lockstep com `uint64_t tick` único.
 - [x] Criar a tag Git do baseline para comparações experimentais futuras: `git tag v1-baseline 3351311`.
 
 ### Fase 2: Implementação do Core Multicore & Laço de Tempo (até 22/11)
