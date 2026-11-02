@@ -16,12 +16,12 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [x] Contadores e métricas de tempo: `cicloInicio`, `cicloFim`, `ultimoEntrouPronto`, `ciclosEspera`, `ciclosExecucao`, `ciclosStall`, `trocasContexto`, `faltasPagina`, `ultimoCore`.
 - [x] Definir a interface de salvamento/restauração de contexto em `src/cpu/cpu.hpp` (`salvarContexto(PCB&)` e `restaurarContexto(const PCB&)`).
 - [ ] Definir a interface do `Kernel` em `src/kernel.hpp` contendo o laço central de simulação em lockstep com `uint64_t tick` único.
-- [ ] Criar a tag Git do baseline para comparações experimentais futuras: `git tag v1-baseline 3351311`.
+- [x] Criar a tag Git do baseline para comparações experimentais futuras: `git tag v1-baseline 3351311`.
 
 ### Fase 2: Implementação do Core Multicore & Laço de Tempo (até 22/11)
-- [ ] Adaptar a classe `CPU` (`src/cpu/cpu.hpp` e `src/cpu/cpu.cpp`):
-  - [ ] Adicionar identificador do núcleo (`int coreId`), ponteiro para processo atual (`PCB* processoAtual`) e contador de instrução multictick (`uint32_t ciclosRestantes`).
-  - [ ] Implementar `salvarContexto(PCB&)` e `restaurarContexto(const PCB&)` integrados ao `RegisterBank` e `ControlUnit`.
+- [x] Adaptar a classe `CPU` (`src/cpu/cpu.hpp` e `src/cpu/cpu.cpp`):
+  - [x] Adicionar identificador do núcleo (`int coreId`), ponteiro para processo atual (`PCB* processoAtual`) e contador de instrução multictick (`uint32_t ciclosRestantes`).
+  - [x] Implementar `salvarContexto(PCB&)` e `restaurarContexto(const PCB&)` integrados ao `RegisterBank` e `ControlUnit`.
 - [ ] Atualizar `ControlUnit` (`src/cpu/control/control_unit.cpp`):
   - [ ] Remover a adição estática de `+ OS_RESERVED_MEM` em `LOAD`, `STORE`, `BEQ` e `JUMP`.
   - [ ] Redirecionar todas as leituras e escritas (inclusive o `fetch` de instruções) para a MMU, passando `endLogico`, `pid` e `coreId`.
