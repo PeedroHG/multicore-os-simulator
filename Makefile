@@ -52,7 +52,7 @@ TEST_MEM_BIN     := $(BUILD_DIR)/test_memoria
 TEST_CPU_MEM_BIN := $(BUILD_DIR)/test_cpu_memoria
 TEST_MULTICORE_BIN := $(BUILD_DIR)/test_multicore
 
-.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore benchmark clean help
+.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore benchmark artigo clean help
 
 # Target padrão
 all: $(TARGET)
@@ -168,6 +168,23 @@ test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_m
 	@echo "=========================================="
 
 # ------------------------------------------------------------------------------
+# Compilação do Artigo Científico (salva PDF na raiz)
+# ------------------------------------------------------------------------------
+artigo:
+	@echo "==> Compilando artigo científico..."
+	@if [ -f artigo/typst ]; then \
+		./artigo/typst compile artigo/artigo.typ artigo.pdf; \
+	elif command -v typst >/dev/null 2>&1; then \
+		typst compile artigo/artigo.typ artigo.pdf; \
+	elif command -v pdflatex >/dev/null 2>&1; then \
+		(cd artigo && pdflatex -interaction=nonstopmode artigo.tex && cd .. && cp artigo/artigo.pdf ./artigo.pdf); \
+	else \
+		echo "Erro: nem typst nem pdflatex foram encontrados para compilar o artigo."; exit 1; \
+	fi
+	@cp -f artigo.pdf artigo/artigo.pdf 2>/dev/null || true
+	@echo "==> Artigo gerado com sucesso: ./artigo.pdf"
+
+# ------------------------------------------------------------------------------
 # Limpeza
 # ------------------------------------------------------------------------------
 clean:
@@ -189,5 +206,7 @@ help:
 	@echo "  make test_cpu       - Executa o teste de integração da CPU"
 	@echo "  make test_memoria   - Executa os testes unitários de Memória"
 	@echo "  make test_cpu_memoria - Executa os testes de integração CPU + Memória"
+	@echo "  make benchmark      - Executa bateria de benchmarks multicore"
+	@echo "  make artigo         - Compila o artigo IEEE e salva ./artigo.pdf na raiz"
 	@echo "  make clean          - Remove os binários e diretório de build"
 	@echo "  make help           - Exibe esta mensagem de ajuda"

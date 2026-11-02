@@ -1,0 +1,193 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning}
+
+\begin{document}
+
+\title{Simulador de Arquitetura Multicore com Gerenciamento de Memória Paginada e Escalonamento Dinâmico de Tarefas}
+
+\author{
+    \IEEEauthorblockN{Pedro Henrique Galvão}
+    \IEEEauthorblockA{\textit{DECOM-DV / CEFET-MG} \\
+    devpedrohg@gmail.com}
+    \and
+    \IEEEauthorblockN{João Paulo}
+    \IEEEauthorblockA{\textit{DECOM-DV / CEFET-MG} \\
+    Divinópolis, Brasil}
+    \and
+    \IEEEauthorblockN{Igor Peixoto}
+    \IEEEauthorblockA{\textit{DECOM-DV / CEFET-MG} \\
+    Divinópolis, Brasil}
+    \and
+    \IEEEauthorblockN{Otávio Hiratsuka}
+    \IEEEauthorblockA{\textit{DECOM-DV / CEFET-MG} \\
+    Divinópolis, Brasil}
+}
+
+\maketitle
+
+\begin{abstract}
+[A SER ESCRITO PELA PESSOA 4] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Repositório: \url{https://github.com/PeedroHG/multicore-os-simulator}.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Sistemas Operacionais, Multicore, Troca de Contexto, PCB, Lockstep, Amdahl.
+\end{IEEEkeywords}
+
+\section{Introdução}
+% [Seção sob responsabilidade de Otávio Hiratsuka]
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.
+
+\subsection{Repositório e Instruções de Compilação}
+O código-fonte completo e modular do projeto está hospedado publicamente no repositório GitHub:\\
+\centerline{\url{https://github.com/PeedroHG/multicore-os-simulator}}
+
+Para a compilação e execução do simulador em ambiente GNU/Linux, utiliza-se a ferramenta Make sobre o padrão C++17:
+\begin{verbatim}
+# 1. Compilação do executável principal
+make
+
+# 2. Execução parametrizada do simulador
+./simulador --cores 4 --politica rr --modo p
+
+# 3. Execução da suíte completa de testes
+make test
+
+# 4. Execução da bateria de benchmarks
+make benchmark
+\end{verbatim}
+
+\section{Arquitetura Multicore e Modelo de Execução}
+% [Seção sob responsabilidade de Pedro Henrique Galvão]
+O sistema foi estruturado com um Kernel centralizado, responsável pelo despacho e controle de tempo de $n$ núcleos de processamento idênticos ($\text{CPU}_0, \text{CPU}_1, \dots, \text{CPU}_{n-1}$). Todos os núcleos compartilham a mesma memória principal, cujo espaço físico é dividido entre a área reservada do sistema operacional (endereços $0\text{x}0000$ a $0\text{x}01\text{FF}$) e a área dos programas de usuário.
+
+\subsection{Modelo de Execução Temporal em Lockstep}
+Para afastar condições de corrida não-determinísticas inerentes à manipulação de threads assíncronas do sistema hospedeiro e assegurar reprodutibilidade experimental exata, a simulação adota o modelo de \textit{passo sincronizado} (\textit{lockstep}). 
+
+O Kernel gerencia o relógio central do sistema através do contador \texttt{tickGlobal}. Em cada pulso de clock ($t \to t + 1$), o Kernel percorre os núcleos de $0$ a $n-1$:
+\begin{enumerate}
+    \item Incrementa o tempo de espera ($\text{ciclosEspera}$) de todos os processos que permanecem na fila de aptos (\texttt{PRONTO});
+    \item Para núcleos em estolagem de memória, consome 1 ciclo de latência de E/S sem despachar instrução;
+    \item Para núcleos desocupados, aciona o despachante para alocar o próximo processo da fila;
+    \item Para núcleos com processo ativo, dispara o ciclo elementar de instrução ($\text{CPU::step()}$), atualizando registradores e o contador de quantum.
+\end{enumerate}
+
+\subsection{Bloco de Controle de Processo (PCB)}
+A abstração de processo é consolidada na estrutura \texttt{PCB} (\textit{Process Control Block}), que atua como o repositório de persistência do estado lógico e arquitetural de cada tarefa admitida no lote inicial (em $t = 0$). O PCB encapsula:
+\begin{itemize}
+    \item \textbf{Identificação e Ciclo de Vida:} Identificador numérico exclusivo (\texttt{PID}), nome do arquivo fonte e estado formal (\texttt{NOVO}, \texttt{PRONTO}, \texttt{EXECUTANDO}, \texttt{FINALIZADO} ou \texttt{ABORTADO});
+    \item \textbf{Contexto de Hardware:} Snapshot estruturado (\texttt{CPUContext}) composto pelos registradores de uso geral $R_0$ a $R_7$, Program Counter ($PC$) lógico, Instruction Register ($IR$) e sinalizadores de término da Unidade de Controle (\texttt{halted});
+    \item \textbf{Descritores de Escalonamento:} Prioridade estática base, prioridade dinâmica efetiva (para mecanismos de \textit{aging}), estimativa estática de rajada e quantum consumido;
+    \item \textbf{Telemetria e Métricas:} \textit{Timestamps} dos ciclos de admissão, início e encerramento, além de contadores para tempo de espera na fila, tempo de execução na CPU, tempo parado em stall e quantidade de trocas de contexto.
+\end{itemize}
+
+\subsection{Mecanismo e Penalidade de Troca de Contexto}
+A troca de contexto é implementada desacopladamente na classe \texttt{CPU} através dos métodos primitivos \texttt{salvarContexto(PCB\&)} e \texttt{restaurarContexto(PCB\&)}. 
+
+Quando um processo esgota sua fatia temporal (quantum) ou sofre preempção por prioridade, o núcleo extrai os valores dos registradores físicos e os salva no PCB. Em seguida, a CPU carrega os registradores do novo processo que vai assumir o núcleo.
+
+Para refletir o custo operacional real de salvamento de registradores e sobrecarga do despachante~\cite{silberschatz2018}, o simulador aplica uma penalidade de tempo configurável:
+\begin{equation}
+C_{\text{troca}} = 5 \text{ ciclos de clock}
+\end{equation}
+Essa penalidade é estritamente contabilizada apenas quando há alternância efetiva de processos ($\text{PID}_{\text{anterior}} \neq \text{PID}_{\text{novo}}$) no mesmo núcleo.
+
+\subsection{Tratamento de Faltas de Página via Estolagem (Stall)}
+Em conformidade com a especificação formal do trabalho que proíbe o chaveamento de tarefas no cenário não-preemptivo, as faltas de bloco/página (\textit{page faults}) geradas pelo subsistema de memória virtual não transitam o processo para um estado tradicional \texttt{BLOQUEADO}. Em substituição, a CPU ativa um mecanismo de estolagem do núcleo (\textit{pipeline stall}) por:
+\begin{equation}
+C_{\text{falta}} = 50 \text{ ciclos de clock}
+\end{equation}
+somados a 50 ciclos adicionais caso a moldura vítima substituída exija escrita retroativa (\textit{write-back}) de dados alterados para o disco virtual. Durante os ciclos de estolagem, o núcleo permanece paralisado simulando o barramento de transferência de memória secundária, garantindo fidelidade temporal ao cenário não-preemptivo.
+
+\subsection{Fluxograma Geral da Arquitetura}
+O fluxo operacional do Kernel e a interação síncrona entre núcleos, despachante e memória estão esquematizados na Figura~\ref{fig:fluxograma_sistema}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=1.3cm, auto,
+    block/.style={rectangle, draw, fill=blue!10, text width=6.5cm, text centered, rounded corners, minimum height=0.8cm, font=\small},
+    decision/.style={diamond, draw, fill=orange!10, text width=4.0cm, text centered, font=\footnotesize, inner sep=0pt},
+    line/.style={draw, -latex', thick}]
+    
+    \node [block] (init) {Admissão do Lote Fechado ($t = 0$) $\to$ Criação dos PCBs};
+    \node [block, below of=init] (tick) {Avanço do Relógio Central: $\text{tickGlobal} \to \text{tickGlobal} + 1$};
+    \node [block, below of=tick] (loop) {Kernel itera sobre núcleos $k = 0 \dots n-1$};
+    \node [decision, below of=loop, node distance=1.7cm] (stall) {Núcleo $k$ em Stall (Page Fault)?};
+    \node [block, right of=stall, node distance=3.2cm, fill=red!10, text width=2.2cm] (decstall) {Decrementa stall; stall++};
+    \node [decision, below of=stall, node distance=1.8cm] (idle) {Núcleo $k$ Livre?};
+    \node [block, right of=idle, node distance=3.2cm, fill=green!10, text width=2.2cm] (alloc) {Despachante: restaura PCB};
+    \node [block, below of=idle, node distance=1.6cm] (step) {Executa Instrução: $\text{CPU}_k\text{::step()}$};
+    \node [decision, below of=step, node distance=1.7cm] (halt) {Instrução HALT encontrada?};
+    \node [block, right of=halt, node distance=3.2cm, fill=gray!20, text width=2.2cm] (finish) {PCB FINALIZADO; Libera núcleo};
+    \node [decision, below of=halt, node distance=1.8cm] (preempt) {Quantum esgotado (Modo P)?};
+    \node [block, right of=preempt, node distance=3.2cm, fill=yellow!20, text width=2.2cm] (save) {Salva PCB; Devolve à fila};
+    \node [decision, below of=preempt, node distance=1.8cm] (active) {Existem tarefas pendentes?};
+    \node [block, below of=active, node distance=1.6cm, fill=green!20] (end) {Término da Simulação (Makespan final)};
+
+    \path [line] (init) -- (tick);
+    \path [line] (tick) -- (loop);
+    \path [line] (loop) -- (stall);
+    \path [line] (stall) -- node [above] {Sim} (decstall);
+    \path [line] (stall) -- node [right] {Não} (idle);
+    \path [line] (idle) -- node [above] {Sim} (alloc);
+    \path [line] (idle) -- node [right] {Não} (step);
+    \path [line] (alloc) |- (step);
+    \path [line] (step) -- (halt);
+    \path [line] (halt) -- node [above] {Sim} (finish);
+    \path [line] (halt) -- node [right] {Não} (preempt);
+    \path [line] (preempt) -- node [above] {Sim} (save);
+    \path [line] (preempt) -- node [right] {Não} (active);
+    \path [line] (decstall) |- (active);
+    \path [line] (finish) |- (active);
+    \path [line] (save) |- (active);
+    \path [line] (active) -- node [right] {Não} (end);
+    \path [line] (active.west) -- ++(-1.0,0) |- node [near start, above] {Sim} (tick.west);
+\end{tikzpicture}
+\caption{Fluxograma do ciclo de execução multicore em passo sincronizado (Lockstep) gerenciado pelo Kernel.}
+\label{fig:fluxograma_sistema}
+\end{figure}
+
+\section{Gerenciamento de Memória Virtual}
+% [Seção sob responsabilidade de João Paulo: Fatiamento em 16 palavras, MMU, Tabela de Molduras, FIFO e LRU]
+
+\section{Políticas de Escalonamento de Tarefas}
+% [Seção sob responsabilidade de Igor Peixoto: FCFS, SJN, RR, Prioridade + Aging e Pseudocódigos Formais]
+
+\section{Metodologia Experimental e Cargas de Teste}
+% [Seção sob responsabilidade de Otávio Hiratsuka: Lotes CPU-bound, Memory-bound e Misto]
+
+\section{Resultados e Discussão}
+
+\subsection{Análise de Speedup e Escalabilidade Multicore (Experimento E1)}
+A quantificação do ganho advindo da paralelização física do hardware toma como referência a formulação clássica da Lei de Amdahl~\cite{amdahl1967}. O Speedup $S(n)$ sobre $n$ núcleos de processamento é mensurado comparando o makespan (tempo total de conclusão do lote) obtido na configuração uniprocessada $T(1)$ contra a execução paralela em $n$ núcleos $T(n)$:
+\begin{equation}
+S(n) = \frac{T(1)}{T(n)}
+\end{equation}
+
+A eficiência paralela normalizada $E(n)$, que traduz a fração de hardware efetivamente convertida em aceleração líquida, é definida por:
+\begin{equation}
+E(n) = \frac{S(n)}{n} \times 100\%
+\end{equation}
+
+% [Os gráficos comparativos e a discussão aprofundada dos resultados serão inseridos após a execução completa dos benchmarks com os lotes finais de teste.]
+
+\section{Conclusão}
+% [Seção sob responsabilidade de Otávio Hiratsuka]
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+\bibliographystyle{IEEEtran}
+\bibliography{referencias}
+
+\end{document}

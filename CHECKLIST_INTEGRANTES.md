@@ -4,7 +4,7 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 
 ---
 
-## 👤 Pessoa 1: Kernel (Lockstep), Multicore, PCB, Context Switch & CLI
+## 👤 Pedro Henrique Galvão (Arquitetura Multicore, Kernel Lockstep, PCB, Troca de Contexto e CLI)
 
 ### Fase 1: Interfaces e Estruturas de Dados (até 08/11)
 - [x] Criar o arquivo `src/pcb.hpp` reaproveitando `CPUContext` de `src/cpu/registers/register_bank.hpp`:
@@ -26,12 +26,12 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [ ] Remover a adição estática de `+ OS_RESERVED_MEM` em `LOAD`, `STORE`, `BEQ` e `JUMP`.
   - [ ] Redirecionar todas as leituras e escritas (inclusive o `fetch` de instruções) para a MMU, passando `endLogico`, `pid` e `coreId`.
   - [ ] Inicializar o PC lógico sempre em `0x000`.
-- [ ] Implementar o `Kernel` (`src/kernel.cpp`):
-  - [ ] Instanciar `std::vector<CPU> cores(n)`.
-  - [ ] Laço determinístico de clock global: a cada tick `t`, iterar núcleos de `0` até `n-1`.
-  - [ ] Tratar penalidades de *stall* (falta de página) e custos de troca de contexto (`CUSTO_TROCA`, padrão 5 ciclos, apenas se o PID mudar).
-  - [ ] Atualizar contadores de estado de cada PCB (`ciclosEspera` para quem está na fila de prontos; `ciclosExecucao`/`ciclosStall` para quem está nos núcleos).
-  - [ ] Integrar proteção contra laços infinitos (`LIMITE_INSTRUCOES_POR_JOB`).
+- [x] Implementar o `Kernel` (`src/kernel.cpp`):
+  - [x] Instanciar `std::vector<CPU> cores(n)`.
+  - [x] Laço determinístico de clock global: a cada tick `t`, iterar núcleos de `0` até `n-1`.
+  - [x] Tratar penalidades de *stall* (falta de página) e custos de troca de contexto (`CUSTO_TROCA`, padrão 5 ciclos, apenas se o PID mudar).
+  - [x] Atualizar contadores de estado de cada PCB (`ciclosEspera` para quem está na fila de prontos; `ciclosExecucao`/`ciclosStall` para quem está nos núcleos).
+  - [x] Integrar proteção contra laços infinitos (`LIMITE_INSTRUCOES_POR_JOB`).
 - [x] Adaptar `loader/batch_manager.cpp` e `main.cpp`:
   - [x] Implementar parsing dos argumentos de linha de comando (`--cores`, `--politica`, `--modo`, `--quantum`, `--substituicao`, `--molduras`, `--penalidade-falta`, `--custo-troca`, `--aging`, `--saida`).
   - [x] Substituir o uso da classe legada/morta `SistemaOperacional` pelo novo `Kernel`.
@@ -43,15 +43,14 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 - [x] Criar o script mestre de execução da matriz de testes `scripts/benchmark.sh`.
 
 ### Fase 4: Artigo IEEE & Análise de Resultados (até 05/12)
-- [ ] Redigir a seção de **Arquitetura Multicore e Modelo de Execução Lockstep**.
-- [ ] Descrever a estrutura do **PCB** e a semântica da **Troca de Contexto**.
-- [ ] Elaborar o **Fluxograma Geral do Sistema** (Ciclo de Vida de Processos e Laço do Kernel).
-- [ ] Redigir a subseção de **Fundamentação Teórica / Trabalhos Relacionados** (Amdahl, Tanenbaum, Silberschatz).
-- [ ] Analisar e discutir os dados do **Experimento E1** (Speedup $S(n)$, Eficiência Paralela $E(n)$ e Throughput global variando $n \in \{1, 2, 4, 8\}$).
+- [x] Redigir a seção de **Arquitetura Multicore e Modelo de Execução Lockstep**.
+- [x] Descrever a estrutura do **PCB** e a semântica da **Troca de Contexto**.
+- [x] Elaborar o **Fluxograma Geral do Sistema** (Ciclo de Vida de Processos e Laço do Kernel).
+- [ ] Analisar e discutir os dados do **Experimento E1** (Speedup $S(n)$, Eficiência Paralela $E(n)$ e Throughput global variando $n \in \{1, 2, 4, 8\}$). *(Aguardando execução dos benchmarks finais com os lotes da equipe)*
 
 ---
 
-## 👤 Pessoa 2: Gerenciamento de Memória (Paginação, Modelo Tanenbaum)
+## 👤 João Paulo (Gerenciamento de Memória - Paginação, Modelo Tanenbaum)
 
 ### Fase 1: Interfaces, Fatiamento de Bits e MMU Provisória (até 08/11)
 - [ ] Definir constantes e máscaras de paginação em `src/defines.hpp`:
@@ -104,7 +103,7 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 
 ---
 
-## 👤 Pessoa 3: Escalonador de Processos (FCFS, SJN, RR, Prioridade + Aging)
+## 👤 Igor Peixoto (Políticas de Escalonamento e Preempção)
 
 ### Fase 1: Interfaces do Escalonador & Parser de Diretivas (até 08/11)
 - [ ] Criar `src/scheduler.hpp` com design desacoplado (política pura, sem laço próprio):
@@ -147,7 +146,7 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 
 ---
 
-## 👤 Pessoa 4: Métricas, Bateria de Testes, Gráficos & Integração do Artigo
+## 👤 Otávio Hiratsuka (Métricas, Bateria de Testes, Gráficos & Integração do Artigo)
 
 ### Fase 1: Padronização das Métricas e Estrutura de Exportação (até 08/11)
 - [ ] Atualizar `loader/metrics.hpp` e `loader/metrics.cpp` com as fórmulas formais:
