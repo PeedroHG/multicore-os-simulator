@@ -50,8 +50,9 @@ TEST_CPU_BIN     := $(BUILD_DIR)/test_cpu
 TEST_CONTROL_BIN := $(BUILD_DIR)/test_control_unit
 TEST_MEM_BIN     := $(BUILD_DIR)/test_memoria
 TEST_CPU_MEM_BIN := $(BUILD_DIR)/test_cpu_memoria
+TEST_MULTICORE_BIN := $(BUILD_DIR)/test_multicore
 
-.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria clean help
+.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore benchmark clean help
 
 # Target padrão
 all: $(TARGET)
@@ -146,8 +147,21 @@ test_cpu_memoria: $(TEST_CPU_MEM_BIN)
 	@echo "--- Executando Testes CPU + Memoria ---"
 	@./$(TEST_CPU_MEM_BIN)
 
+$(TEST_MULTICORE_BIN): tests/teste_multicore.cpp $(COMMON_OBJS)
+	@echo "==> Compilando: $<"
+	$(CXX) $(CXXFLAGS) -c $< -o $(BUILD_DIR)/tests/teste_multicore.o
+	$(CXX) $(CXXFLAGS) $(BUILD_DIR)/tests/teste_multicore.o $(COMMON_OBJS) -o $@
+
+test_multicore: $(TEST_MULTICORE_BIN)
+	@echo ""
+	@echo "--- Executando Testes Multicore & Baseline ---"
+	@./$(TEST_MULTICORE_BIN)
+
+benchmark: $(TARGET)
+	@./scripts/benchmark.sh
+
 # Executa todos os testes
-test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_memoria
+test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_memoria test_multicore
 	@echo ""
 	@echo "=========================================="
 	@echo "  TODOS OS TESTES PASSARAM COM SUCESSO!   "

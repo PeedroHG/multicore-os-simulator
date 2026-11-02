@@ -37,10 +37,10 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [x] Substituir o uso da classe legada/morta `SistemaOperacional` pelo novo `Kernel`.
 
 ### Fase 3: Integração e Validação (até 29/11)
-- [ ] Criar teste de regressão e validação multicore (`tests/test_multicore.cpp`):
-  - [ ] Validar que com `--cores 1 --politica fcfs --modo np` e memória folgada, os resultados de registradores e memória são idênticos ao baseline (`v1-baseline`).
-  - [ ] Validar execução paralela com 2 e 4 núcleos sem colisão de contexto.
-- [ ] Criar o script mestre de execução da matriz de testes `scripts/benchmark.sh`.
+- [x] Criar teste de regressão e validação multicore (`tests/test_multicore.cpp`):
+  - [x] Validar que com `--cores 1 --politica fcfs --modo np` e memória folgada, os resultados de registradores e memória são idênticos ao baseline (`v1-baseline`).
+  - [x] Validar execução paralela com 2 e 4 núcleos sem colisão de contexto.
+- [x] Criar o script mestre de execução da matriz de testes `scripts/benchmark.sh`.
 
 ### Fase 4: Artigo IEEE & Análise de Resultados (até 05/12)
 - [ ] Redigir a seção de **Arquitetura Multicore e Modelo de Execução Lockstep**.
