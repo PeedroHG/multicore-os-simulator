@@ -35,3 +35,17 @@ int LerDisco(uint16_t dadoBuscado, const std::vector<uint16_t>& Disco) {
     }
     return -1;
 }
+
+uint16_t LerFisico(uint32_t enderecoFisico) {
+    if (enderecoFisico >= TAM_RAM) {
+        throw std::runtime_error("SEGFAULT: Endereco fisico fora da RAM!");
+    }
+    return RAM[enderecoFisico];
+}
+
+void EscreverFisico(uint32_t enderecoFisico, uint16_t dado) {
+    if (enderecoFisico >= TAM_RAM) {
+        throw std::runtime_error("SEGFAULT: Endereco fisico fora da RAM!");
+    }
+    RAM[enderecoFisico] = dado;
+}

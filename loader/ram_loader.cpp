@@ -1,8 +1,7 @@
 #include "ram_loader.hpp"
+#include "../src/defines.hpp"
 
-// Endereço base da RAM física após a área reservada ao Sistema Operacional.
-// (Mesmo valor citado no comentário do ram_loader.hpp: OS_RESERVED_MEM = 512)
-static const uint16_t OS_RESERVED_MEM = 512;
+// OS_RESERVED_MEM agora vem de src/defines.hpp (antes era redefinido aqui).
 static const uint32_t DEFAULT_RAM_SIZE = 65536;
 
 bool RAMLoader::carregarNaRAM(const JobData& job, uint16_t* ram, uint32_t tamRam) {
@@ -43,6 +42,29 @@ bool RAMLoader::carregarNaRAM(const JobData& job, uint16_t* ram, uint32_t tamRam
         }
 
         ram[enderecoAbsoluto] = valor;
+    }
+
+    return true;
+}
+
+bool RAMLoader::montarImagem(const JobData& job, std::vector<uint16_t>& imagem) {
+    const uint32_t tamEspacoLogico = static_cast<uint32_t>(MAX_END_LOGICO) + 1; // 4096 palavras
+    imagem.assign(tamEspacoLogico, 0);
+
+    // 1) Instruções a partir do endereço LÓGICO 0x000 (o PC inicial é 0)
+    if (job.instrucoes.size() > tamEspacoLogico) {
+        return false;
+    }
+    for (size_t i = 0; i < job.instrucoes.size(); ++i) {
+        imagem[i] = job.instrucoes[i];
+    }
+
+    // 2) Variáveis nos seus endereços lógicos (já relativos ao início do processo)
+    for (const auto& variavel : job.variaveis) {
+        if (variavel.first > MAX_END_LOGICO) {
+            return false;
+        }
+        imagem[variavel.first] = variavel.second;
     }
 
     return true;

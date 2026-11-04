@@ -39,4 +39,19 @@ void EscreverMemoria(uint16_t endereco, uint16_t dado);
  */
 int LerDisco(uint16_t dadoBuscado, const std::vector<uint16_t>& Disco);
 
-#endif 
+// ============================================================================
+// ACESSO FÍSICO DIRETO (usado exclusivamente pela MMU)
+// ----------------------------------------------------------------------------
+// Diferente de LerMemoria/EscreverMemoria (legado single-core), estas funções
+// NÃO incrementam clockGlobal: no modelo multicore o único relógio é o tick do
+// Kernel, e o custo das faltas de página é devolvido pela MMU como penalidade.
+// A proteção da área do SO é garantida pela própria MMU (molduras >= 32).
+// ============================================================================
+
+/** Lê uma palavra da RAM física (endereço de 16 bits já traduzido). */
+uint16_t LerFisico(uint32_t enderecoFisico);
+
+/** Escreve uma palavra na RAM física (endereço de 16 bits já traduzido). */
+void EscreverFisico(uint32_t enderecoFisico, uint16_t dado);
+
+#endif
