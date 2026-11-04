@@ -73,7 +73,14 @@ const ControlUnit& CPU::getControlUnit() const {
 }
 
 void CPU::step() {
+    if (mmu && processoAtual) {
+        controlUnit.conectarMMU(mmu, processoAtual, coreId, tickAtual);
+    } else {
+        controlUnit.desconectarMMU();
+    }
+    ultimaPenalidade = 0;
     controlUnit.step(regBank, ula);
+    ultimaPenalidade = controlUnit.consumirPenalidade();
 }
 
 void CPU::imprimirEstado(std::ostream& out) const {

@@ -22,9 +22,20 @@ private:
     PCB* processoAtual = nullptr;
     uint32_t ciclosStall = 0;
 
+    // Barramento de memória (MMU compartilhada entre os núcleos — Pessoa 2)
+    InterfaceMMU* mmu = nullptr;
+    uint64_t tickAtual = 0;
+    uint32_t ultimaPenalidade = 0;
+
 public:
     CPU();
     explicit CPU(int id);
+
+    // MMU: com MMU conectada, PC e endereços do processo são lógicos (base 0)
+    void conectarMMU(InterfaceMMU* m) { mmu = m; }
+    void setTick(uint64_t t) { tickAtual = t; }
+    /** Ciclos de stall (faltas de página) gerados pela última instrução. */
+    uint32_t getUltimaPenalidade() const { return ultimaPenalidade; }
 
     void reset();
     void setPC(uint16_t startAddress);

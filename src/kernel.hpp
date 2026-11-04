@@ -3,6 +3,7 @@
 
 #include "cpu/cpu.hpp"
 #include "pcb.hpp"
+#include "mmu.hpp"
 #include <vector>
 #include <cstdint>
 #include <memory>
@@ -20,8 +21,18 @@ private:
     std::vector<PCB*> processosProntos;
     std::vector<std::unique_ptr<PCB>> todosProcessos;
 
+    // Gerenciador de memória (opcional; nullptr = modo legado sem MMU)
+    InterfaceMMU* mmu = nullptr;
+
+    // Encerra o processo do núcleo (FINALIZADO/ABORTADO) e libera suas molduras
+    void encerrarProcesso(CPU& core, PCB* pcb, EstadoProcesso estadoFinal, uint64_t cicloFim);
+
 public:
     explicit Kernel(int nCores = 4, uint32_t custoTroca = 5, uint32_t limiteInst = 1000000);
+
+    /** Conecta a MMU a todos os núcleos (endereços passam a ser lógicos). */
+    void conectarMMU(InterfaceMMU* m);
+    const std::vector<std::unique_ptr<PCB>>& getProcessos() const { return todosProcessos; }
 
     // Getters de estado
     int getNumCores() const { return numCores; }

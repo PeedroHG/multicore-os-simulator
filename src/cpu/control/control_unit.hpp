@@ -50,9 +50,27 @@ struct InstrucaoDecodificada {
  *   delegada à ULA. A UC apenas decide QUANDO e COM QUAIS operandos a
  *   ULA deve ser acionada, e o que fazer com o resultado.
  */
+class InterfaceMMU; // src/mmu.hpp (Pessoa 2)
+struct PCB;         // src/pcb.hpp
+
 class ControlUnit {
 private:
   bool haltStatus; ///< Flag de parada: true quando um HALT foi processado
+
+  // --- Barramento de memória (MMU) --------------------------------------
+  // Se mmu != nullptr, todos os endereços (PC, LOAD, STORE, BEQ, JUMP) são
+  // LÓGICOS (a partir de 0x000) e todo acesso — inclusive o fetch — passa
+  // pela MMU. Se mmu == nullptr, mantém o modo legado single-core
+  // (LerMemoria/EscreverMemoria com base física OS_RESERVED_MEM).
+  InterfaceMMU *mmu = nullptr;
+  PCB *pcbAtual = nullptr;
+  int coreIdAtual = 0;
+  uint64_t tickAtual = 0;
+  uint32_t penalidadeAcumulada = 0; ///< ciclos de stall gerados na instrução
+
+  uint16_t lerBarramento(uint16_t endereco, bool busca);
+  void escreverBarramento(uint16_t endereco, uint16_t dado);
+  uint16_t baseEnderecamento() const;
 
   /**
    * @brief Despacha uma operação puramente computacional (ADD/SUB/AND/OR)
@@ -73,6 +91,18 @@ public:
 
   /** Retorna true se a UC processou um HALT (job atual finalizado). */
   bool isHalted() const;
+
+  /**
+   * @brief Liga a UC à MMU para o processo do núcleo (endereços lógicos).
+   * Zera a penalidade acumulada da instrução anterior.
+   */
+  void conectarMMU(InterfaceMMU *mmu, PCB *pcb, int coreId, uint64_t tick);
+
+  /** Volta ao modo legado (sem MMU, endereçamento físico com base 512). */
+  void desconectarMMU();
+
+  /** Ciclos de stall (faltas de página) gerados desde o último consumo. */
+  uint32_t consumirPenalidade();
 
   /**
    * @brief Etapa de BUSCA (Fetch).
