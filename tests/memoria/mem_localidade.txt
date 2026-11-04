@@ -1,0 +1,38 @@
+// ===================================================
+// Job de memoria C: LOCALIDADE TEMPORAL (Pessoa 2 - Experimento E4)
+// Laco interno "quente" (paginas 0x00, 0x02, 0x03) executado 8 vezes por
+// iteracao do laco externo, que de vez em quando toca paginas "frias"
+// (0x0A, 0x0B, 0x0C, 0x0D). Favorece o LRU frente ao FIFO.
+// ===================================================
+100C // 0x00: LOAD R0, [0x0C]   (zero)
+110D // 0x01: LOAD R1, [0x0D]   (um)
+150E // 0x02: LOAD R5, [0x0E]   (externo = 6)
+7507 // 0x03: BEQ  R5, R0, 0x07 (externo == 0 -> HALT)
+130F // 0x04: LOAD R3, [0x0F]   (interno = 8)
+7308 // 0x05: BEQ  R3, R0, 0x08 (interno == 0 -> cauda do externo)
+8020 // 0x06: JUMP 0x020        (corpo quente)
+F000 // 0x07: HALT
+80A0 // 0x08: JUMP 0x0A0        (cauda fria)
+
+.data
+0C 0000
+0D 0001
+0E 0006 // iteracoes do laco externo
+0F 0008 // iteracoes do laco interno
+// --- corpo quente: pagina logica 0x02 ---
+20 1230 // 0x020: LOAD  R2, [0x30] (pagina 3)
+21 2221 // 0x021: ADD   R2, R2, R1
+22 3230 // 0x022: STORE R2, [0x30]
+23 4331 // 0x023: SUB   R3, R3, R1
+24 8005 // 0x024: JUMP  0x005
+30 0000 // acumulador quente (resultado = 48)
+// --- cauda fria: pagina logica 0x0A ---
+A0 14B0 // 0x0A0: LOAD  R4, [0xB0] (pagina 0x0B)
+A1 16C0 // 0x0A1: LOAD  R6, [0xC0] (pagina 0x0C)
+A2 2446 // 0x0A2: ADD   R4, R4, R6
+A3 34D0 // 0x0A3: STORE R4, [0xD0] (pagina 0x0D, fica suja)
+A4 4551 // 0x0A4: SUB   R5, R5, R1
+A5 8003 // 0x0A5: JUMP  0x003
+B0 0003
+C0 0004
+D0 0000 // resultado = 7
