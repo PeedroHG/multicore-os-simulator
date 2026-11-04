@@ -23,15 +23,32 @@ void Kernel::admitirProcesso(std::unique_ptr<PCB> pcb) {
     todosProcessos.push_back(std::move(pcb));
 }
 
+void Kernel::conectarMMU(InterfaceMMU* m) {
+    mmu = m;
+    for (auto& core : cores) {
+        core.conectarMMU(m);
+    }
+}
+
+void Kernel::encerrarProcesso(CPU& core, PCB* pcb, EstadoProcesso estadoFinal, uint64_t cicloFim) {
+    pcb->estado = estadoFinal;
+    pcb->cicloFim = cicloFim;
+    if (mmu) {
+        mmu->liberarProcesso(*pcb); // devolve as molduras ao terminar/abortar
+    }
+    core.desalocarProcesso();
+}
+
 bool Kernel::temProcessosAtivos() const {
     // Verifica se ainda há alguém na fila de prontos
     if (!processosProntos.empty()) {
         return true;
     }
 
-    // Ou se algum núcleo ainda está ocupado trabalhando
+    // Ou se algum núcleo ainda está ocupado trabalhando (ou em stall de uma
+    // falta de página gerada pelo HALT do último processo)
     for (const auto& core : cores) {
-        if (!core.estaLivre()) {
+        if (!core.estaLivre() || core.emStall()) {
             return true;
         }
     }
@@ -53,8 +70,12 @@ void Kernel::executarPasso() {
         // Se o núcleo está em stall (espera de memória/disco), apenas decrementa o tempo
         if (core.emStall()) {
             core.decrementarStall();
-            if (core.getProcessoAtual()) {
-                core.getProcessoAtual()->ciclosStall++;
+            if (PCB* p = core.getProcessoAtual()) {
+                p->ciclosStall++;
+                if (!core.emStall() && core.isHalted()) {
+                    core.salvarContexto(*p);
+                    encerrarProcesso(core, p, EstadoProcesso::FINALIZADO, tickGlobal + 1);
+                }
             }
             continue;
         }
@@ -81,29 +102,32 @@ void Kernel::executarPasso() {
             try {
                 // Proteção contra loops infinitos
                 if (atual->instrucoesExecutadas >= limiteInstrucoesPorJob) {
-                    atual->estado = EstadoProcesso::ABORTADO;
-                    atual->cicloFim = tickGlobal;
-                    core.desalocarProcesso();
+                    encerrarProcesso(core, atual, EstadoProcesso::ABORTADO, tickGlobal + 1);
                     continue;
                 }
 
                 // Executa 1 ciclo completo de instrução no núcleo
+                core.setTick(tickGlobal);
                 core.step();
                 atual->instrucoesExecutadas++;
 
-                // Verifica se a instrução executada foi um HALT
-                if (core.isHalted()) {
+                // Faltas de página geradas pela instrução (busca e/ou dados):
+                // o núcleo fica em stall pelos ciclos devolvidos pela MMU.
+                const uint32_t penalidade = core.getUltimaPenalidade();
+
+                if (penalidade > 0) {
+                    // Se houve falta de página (inclusive na busca do HALT),
+                    // o processo permanece no núcleo mantendo suas molduras
+                    // alocadas até o término dos ciclos de stall.
+                    core.adicionarStall(penalidade);
+                } else if (core.isHalted()) {
                     core.salvarContexto(*atual);
-                    atual->estado = EstadoProcesso::FINALIZADO;
-                    atual->cicloFim = tickGlobal;
-                    core.desalocarProcesso();
+                    encerrarProcesso(core, atual, EstadoProcesso::FINALIZADO, tickGlobal + 1);
                 }
             } catch (const std::exception& e) {
-                // Erro em tempo de execução (ex: opcode inválido ou violação)
+                // Erro em tempo de execução (ex: opcode inválido ou SEGFAULT da MMU)
                 core.salvarContexto(*atual);
-                atual->estado = EstadoProcesso::ABORTADO;
-                atual->cicloFim = tickGlobal;
-                core.desalocarProcesso();
+                encerrarProcesso(core, atual, EstadoProcesso::ABORTADO, tickGlobal + 1);
             }
         }
     }
