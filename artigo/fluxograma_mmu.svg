@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 700" width="100%" height="100%" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 12.5px;">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#202124" />
+    </marker>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" />
+
+  <!-- 1. Acesso Logico -->
+  <rect x="45" y="14" width="250" height="42" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="2" />
+  <text x="170" y="32" text-anchor="middle" font-weight="bold" font-size="13px" fill="#174ea6">Requisição à MMU (PID, endLógico)</text>
+  <text x="170" y="48" text-anchor="middle" font-size="11.5px" fill="#1a73e8">Busca (PC), Leitura (LOAD) ou Escrita (STORE)</text>
+
+  <line x1="170" y1="56" x2="170" y2="76" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <!-- 2. Validacao 12 bits -->
+  <polygon points="170,76 260,102 170,128 80,102" fill="#fef7e0" stroke="#f9ab00" stroke-width="1.8" />
+  <text x="170" y="106" text-anchor="middle" font-weight="bold" font-size="11.8px" fill="#202124">endLógico &gt; 0x0FFF?</text>
+
+  <line x1="260" y1="102" x2="305" y2="102" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="278" y="95" font-size="11.5px" font-weight="bold" fill="#d93025">Sim</text>
+  <rect x="305" y="83" width="112" height="38" rx="5" fill="#fce8e6" stroke="#d93025" stroke-width="1.5" />
+  <text x="361" y="99" text-anchor="middle" font-weight="bold" font-size="11.5px" fill="#c5221f">SEGFAULT</text>
+  <text x="361" y="114" text-anchor="middle" font-size="10.5px" fill="#5f6368">Aborta processo</text>
+
+  <line x1="170" y1="128" x2="170" y2="148" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="178" y="142" font-size="11.5px" font-weight="bold" fill="#188038">Não</text>
+
+  <!-- 3. Fatiamento 8+4 -->
+  <rect x="45" y="148" width="250" height="40" rx="6" fill="#f1f3f4" stroke="#5f6368" stroke-width="1.8" />
+  <text x="170" y="166" text-anchor="middle" font-weight="bold" font-size="12.5px" fill="#202124">Fatiamento de Bits (8 + 4)</text>
+  <text x="170" y="181" text-anchor="middle" font-size="11px" fill="#3c4043">p = end &gt;&gt; 4  |  d = end &amp; 0x000F</text>
+
+  <line x1="170" y1="188" x2="170" y2="208" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <!-- 4. Consulta Tabela de Paginas -->
+  <polygon points="170,208 260,234 170,260 80,234" fill="#fef7e0" stroke="#f9ab00" stroke-width="1.8" />
+  <text x="170" y="238" text-anchor="middle" font-weight="bold" font-size="12px" fill="#202124">TP[p].valida == true?</text>
+
+  <!-- Ramo Hit -->
+  <line x1="260" y1="234" x2="305" y2="234" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="278" y="227" font-size="11.5px" font-weight="bold" fill="#188038">Sim</text>
+  <rect x="305" y="215" width="112" height="38" rx="5" fill="#e6f4ea" stroke="#137333" stroke-width="1.5" />
+  <text x="361" y="231" text-anchor="middle" font-weight="bold" font-size="11.5px" fill="#137333">Acerto (Hit)</text>
+  <text x="361" y="246" text-anchor="middle" font-size="10.5px" fill="#5f6368">penalidade = 0</text>
+
+  <!-- Ramo Miss (Page Fault) -->
+  <line x1="170" y1="260" x2="170" y2="282" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="178" y="274" font-size="11.5px" font-weight="bold" fill="#d93025">Não (Falta)</text>
+
+  <!-- 5. Moldura Livre? -->
+  <polygon points="170,282 260,308 170,334 80,308" fill="#fef7e0" stroke="#f9ab00" stroke-width="1.8" />
+  <text x="170" y="312" text-anchor="middle" font-weight="bold" font-size="11.8px" fill="#202124">Há moldura livre?</text>
+
+  <!-- Ramo Moldura Livre: Sim -->
+  <line x1="260" y1="308" x2="305" y2="308" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="278" y="301" font-size="11.5px" font-weight="bold" fill="#188038">Sim</text>
+  <rect x="305" y="289" width="112" height="38" rx="5" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.5" />
+  <text x="361" y="305" text-anchor="middle" font-weight="bold" font-size="11.5px" fill="#174ea6">Aloca moldura</text>
+  <text x="361" y="320" text-anchor="middle" font-size="10.5px" fill="#5f6368">menor índice livre</text>
+
+  <!-- Ramo Moldura Livre: Nao -> Substituicao -->
+  <line x1="170" y1="334" x2="170" y2="356" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="178" y="348" font-size="11.5px" font-weight="bold" fill="#5f6368">Não</text>
+
+  <!-- 6. Escolhe Vitima FIFO/LRU -->
+  <rect x="45" y="356" width="250" height="38" rx="6" fill="#fef7e0" stroke="#f29900" stroke-width="1.8" />
+  <text x="170" y="373" text-anchor="middle" font-weight="bold" font-size="12px" fill="#b06000">Substituição Global (FIFO / LRU)</text>
+  <text x="170" y="388" text-anchor="middle" font-size="10.8px" fill="#5f6368">Seleciona vítima e invalida TP anterior</text>
+
+  <line x1="170" y1="394" x2="170" y2="414" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <!-- 7. Vitima Suja? -->
+  <polygon points="170,414 260,440 170,466 80,440" fill="#fef7e0" stroke="#f9ab00" stroke-width="1.8" />
+  <text x="170" y="444" text-anchor="middle" font-weight="bold" font-size="11.8px" fill="#202124">Vítima suja (dirty)?</text>
+
+  <line x1="260" y1="440" x2="305" y2="440" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="278" y="433" font-size="11.5px" font-weight="bold" fill="#d93025">Sim</text>
+  <rect x="305" y="421" width="112" height="38" rx="5" fill="#fce8e6" stroke="#d93025" stroke-width="1.5" />
+  <text x="361" y="437" text-anchor="middle" font-weight="bold" font-size="11.5px" fill="#c5221f">Write-back Disco</text>
+  <text x="361" y="452" text-anchor="middle" font-size="10.5px" fill="#5f6368">+50 ciclos stall</text>
+
+  <line x1="170" y1="466" x2="170" y2="490" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+  <text x="178" y="481" font-size="11.5px" font-weight="bold" fill="#5f6368">Não</text>
+
+  <!-- Liga Aloca Moldura e Write-back para Carga do Disco -->
+  <line x1="361" y1="327" x2="361" y2="395" stroke="#5f6368" stroke-width="1.4" />
+  <line x1="361" y1="395" x2="295" y2="509" stroke="#5f6368" stroke-width="1.4" marker-end="url(#arrow)" />
+  <line x1="361" y1="459" x2="361" y2="509" stroke="#202124" stroke-width="1.5" />
+  <line x1="361" y1="509" x2="295" y2="509" stroke="#202124" stroke-width="1.5" marker-end="url(#arrow)" />
+
+  <!-- 8. Carrega do Disco Virtual -->
+  <rect x="45" y="490" width="250" height="42" rx="6" fill="#e8eaed" stroke="#3c4043" stroke-width="1.8" />
+  <text x="170" y="508" text-anchor="middle" font-weight="bold" font-size="12px" fill="#202124">Copia 16 palavras do Disco → RAM</text>
+  <text x="170" y="523" text-anchor="middle" font-size="10.8px" fill="#3c4043">TP[p].valida = true | +50 ciclos stall</text>
+
+  <line x1="170" y1="532" x2="170" y2="556" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <!-- Liga Hit para Atualizacao de Bits -->
+  <line x1="417" y1="234" x2="424" y2="234" stroke="#137333" stroke-width="1.5" />
+  <line x1="424" y1="234" x2="424" y2="576" stroke="#137333" stroke-width="1.5" />
+  <line x1="424" y1="576" x2="295" y2="576" stroke="#137333" stroke-width="1.5" marker-end="url(#arrow)" />
+
+  <!-- 9. Atualiza Metadados e Endereco Fisico -->
+  <rect x="45" y="556" width="250" height="42" rx="6" fill="#f1f3f4" stroke="#5f6368" stroke-width="1.8" />
+  <text x="170" y="574" text-anchor="middle" font-weight="bold" font-size="12px" fill="#202124">Atualiza R, M (se STORE) e contador LRU</text>
+  <text x="170" y="589" text-anchor="middle" font-size="10.8px" fill="#3c4043">endFísico = (moldura &lt;&lt; 4) | d  (12+4 bits)</text>
+
+  <line x1="170" y1="598" x2="170" y2="622" stroke="#202124" stroke-width="1.8" marker-end="url(#arrow)" />
+
+  <!-- 10. Acesso RAM e Retorno -->
+  <rect x="45" y="622" width="250" height="42" rx="8" fill="#ceead6" stroke="#137333" stroke-width="2" />
+  <text x="170" y="640" text-anchor="middle" font-weight="bold" font-size="12.5px" fill="#0d652d">Acessa RAM[endFísico] e grava Rastro</text>
+  <text x="170" y="655" text-anchor="middle" font-size="11px" fill="#137333">Devolve (valor, ciclosPenalidade) à UC</text>
+</svg>

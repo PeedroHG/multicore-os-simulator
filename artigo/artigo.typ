@@ -109,7 +109,48 @@ O fluxo operacional do Kernel e a interação síncrona entre núcleos, despacha
 ) <fig-fluxograma>
 
 = III. Gerenciamento de Memória Virtual
-_[Seção sob responsabilidade de João Paulo: Fatiamento em 16 palavras, MMU, Tabela de Molduras, FIFO e LRU]_
+Embora o enunciado empregue a expressão "memória segmentada", os mecanismos prescritos --- divisão do espaço em blocos de tamanho fixo combinados a deslocamento (_offset_) e substituição por FIFO ou LRU --- caracterizam formalmente a *paginação sob demanda* no modelo clássico de Tanenbaum [3]. Para viabilizar a multiprogramação sem colisão de endereços entre núcleos, a Unidade de Controle (UC) foi desacoplada da memória física: o Contador de Programa ($P C$) de todo processo inicia em `0x000`, a soma estática de `OS_RESERVED_MEM` ($512$) foi eliminada das instruções `LOAD`, `STORE`, `BEQ` e `JUMP`, e todos os acessos --- inclusive a busca de instruções (_fetch_) --- são interceptados pela Unidade de Gerenciamento de Memória (MMU).
+
+== A. Fatiamento de Bits e Espaço de Endereçamento
+Na arquitetura RISC de 16 bits adotada, as instruções do tipo I (`LOAD`, `STORE` e `BEQ`) dispõem de 8 bits de endereço imediato (`0x00`--`0xFF`), ao passo que desvios incondicionais (`JUMP`) alcançam 12 bits (`0x000`--`0xFFF`). Caso fossem empregadas páginas grandes (e.g., 64 ou 256 palavras), programas inteiros caberiam em uma única página, tornando indistinguíveis as políticas de substituição. Adotou-se, portanto, o tamanho de página $P = 2^4 = 16$ palavras, estabelecendo o fatiamento da Tabela I:
+
+#figure(
+  table(
+    columns: (auto, auto, auto, auto),
+    align: (left, left, left, left),
+    stroke: 0.5pt,
+    [*Endereço*], [*Largura*], [*Fatiamento de Bits*], [*Capacidade*],
+    [Lógico], [12 bits], [`[11:4]` pág. (8b) | `[3:0]` offset (4b)], [256 págs. $times$ 16 pal.],
+    [Físico], [16 bits], [`[15:4]` mold. (12b) | `[3:0]` offset (4b)], [4096 molduras (64K)],
+  ),
+  caption: [Fatiamento de Endereços Lógicos e Físicos na MMU.],
+)
+
+Endereços lógicos com bits `[15:12]` $eq.not 0$ ultrapassam o limite de 4096 palavras (`0x0FFF`) e disparam falha de segmentação (`SEGFAULT`), abortando o processo infrator sem interromper o lote. Dado um endereço lógico $e$, a página $p$, o deslocamento $d$ e o endereço físico $e_f$ associado à moldura física $m$ são obtidos em tempo constante por operações bit a bit:
+$ p = e >> 4, quad d = e and "0x000F", quad e_f = (m << 4) or d $
+
+As primeiras $"MOLDURAS_SO" = 512 / 16 = 32$ molduras físicas (endereços `0x0000` a `0x01FF`) permanecem estritamente reservadas ao Sistema Operacional. Os processos de usuário compartilham um conjunto configurável de $M in [4, 32]$ molduras físicas ($m = 32 + i$, com $0 <= i < M$), impondo escassez controlada de RAM para exercitar a paginação.
+
+== B. Tabela de Páginas, Core Map e Paginação sob Demanda
+O isolamento entre espaços virtuais é assegurado por três estruturas complementares:
++ *Tabela de Páginas por Processo (`PCB::tabelaPaginas`):* Vetor de 256 descritores `EntradaPagina` embutido no próprio PCB (atuando de forma análoga ao registrador base _PTBR_). Cada entrada mantém os bits de presença (`valida`), modificação (`suja` / _dirty bit_), referência (`referenciada`) e o índice da `moldura` física correspondente;
++ *Tabela de Molduras Global (_Core Map_):* Vetor de $M$ descritores que rastreia o estado de ocupação de cada quadro de usuário (`livre`, `pid` proprietário, número da `pagina`, ordem de carga `carregadaEm` e carimbo temporal `ultimoAcesso`);
++ *Disco Virtual por Processo:* Na admissão do lote ($t = 0$), o `RAMLoader` constrói a imagem lógica de 4096 palavras de cada tarefa diretamente no disco virtual simulado, sem tocar na RAM física, e inicializa todas as 256 páginas do PCB com `valida = false`.
+
+Quando um núcleo requisita uma palavra cuja página encontra-se inválida, ocorre uma *falta de página* (_page fault_). A MMU aloca a moldura livre de menor índice ou, na ausência de quadros vagos, aciona o algoritmo de substituição global [3], podendo selecionar vítimas pertencentes a qualquer processo ativo. Se a página vítima possuir `suja = true` (modificada por instrução `STORE`), seus 16 endereços são copiados de volta para a imagem no Disco Virtual (_write-back_) antes da carga da nova página, adicionando $+50$ ciclos à penalidade base de $50$ ciclos da falta. Ao término ou aborto de um processo, todas as suas molduras são liberadas no _Core Map_.
+
+== C. Políticas de Substituição Global: FIFO, LRU e OPT
+Foram implementadas duas políticas online na MMU e um oráculo offline de avaliação:
+- *FIFO (_First-In, First-Out_):* Mantém uma fila circular de índices de molduras na ordem estrita de carregamento (`contadorCargas`). Substitui a página residente há mais tempo, independentemente de sua frequência de uso, estando sujeito à Anomalia de Belady [6];
+- *LRU Exato (_Least Recently Used_):* A cada acesso (busca, leitura ou escrita), a MMU incrementa um *contador monotônico global de acessos* (`contadorAcessos`) e registra-o em `ultimoAcesso` da moldura. O uso de um contador de eventos em vez do `tickGlobal` elimina empates quando múltiplos núcleos acessam a memória no mesmo pulso de clock. Como algoritmo de pilha, o LRU satisfaz a propriedade de inclusão de Mattson et al. [7] e é imune à Anomalia de Belady;
+- *OPT de Belady (Offline):* A MMU exporta o rastro completo de referências $(t, "core", "PID", p, "tipo")$ em CSV, processado pelo script `scripts/opt_belady.py` para substituir a página cujo próximo uso está mais distante no futuro [5], estabelecendo o limite inferior teórico de faltas.
+
+O fluxo completo de tradução de endereços, detecção de faltas e substituição com escrita retroativa está ilustrado na Figura 2.
+
+#figure(
+  image("fluxograma_mmu.svg", width: 95%),
+  caption: [Fluxograma de tradução de endereços, tratamento de falta de página e substituição na MMU.],
+) <fig-fluxograma-mmu>
 
 = IV. Políticas de Escalonamento de Tarefas
 _[Seção sob responsabilidade de Igor Peixoto: FCFS, SJN, RR, Prioridade + Aging e Pseudocódigos Formais]_
@@ -128,6 +169,37 @@ $ E(n) = (S(n)) / n times 100% $
 
 _[Os gráficos comparativos e a discussão aprofundada dos resultados serão inseridos após a execução completa dos benchmarks com os lotes finais de teste.]_
 
+== B. Desempenho da Paginação: FIFO vs. LRU vs. OPT e Anomalia de Belady (Experimento E4)
+Para avaliar o subsistema de memória virtual sob diferentes graus de pressão de RAM, o Experimento E4 submeteu um lote de 6 processos (totalizando $1.150$ referências à memória e conjunto de trabalho agregado de 25 páginas lógicas distintas, combinando varreduras cíclicas e laços com localidade temporal [8]) à variação da quantidade de molduras de usuário $M in {4, 6, 8, 12, 16, 24, 32}$, contrastando as políticas FIFO, LRU e o limite ótimo offline (OPT de Belady). A Tabela II sintetiza as faltas de página obtidas nos cenários uniprocessado ($n = 1$, sem entrelaçamento entre processos) e multiprocessado ($n = 4$, com competição simultânea pelas molduras globais).
+
+#figure(
+  table(
+    columns: (auto, auto, auto, auto, auto, auto, auto),
+    align: (right, right, right, right, right, right, right),
+    stroke: 0.5pt,
+    [*M*], [*FIFO (1c)*], [*LRU (1c)*], [*OPT (1c)*], [*FIFO (4c)*], [*LRU (4c)*], [*OPT (4c)*],
+    [4],  [308 (26,8%)], [303 (26,3%)], [185 (16,1%)], [553 (48,1%)], [507 (44,1%)], [357 (31,0%)],
+    [6],  [308 (26,8%)], [226 (19,7%)], [89 (7,7%)],   [455 (39,6%)], [361 (31,4%)], [258 (22,4%)],
+    [8],  [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],   [364 (31,7%)], [307 (26,7%)], [200 (17,4%)],
+    [12], [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],   [294 (25,6%)], [258 (22,4%)], [128 (11,1%)],
+    [16], [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],   [157 (13,7%)], [185 (16,1%)], [70 (6,1%)],
+    [24], [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],   [28 (2,4%)],   [26 (2,3%)],   [25 (2,2%)],
+    [32], [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],   [25 (2,2%)],
+  ),
+  caption: [Faltas de Página e Taxa de Faltas em Função do Número de Molduras ($1.150$ Referências).],
+)
+
+A análise dos dados experimentais e da curva apresentada na Figura 3 evidencia quatro fenômenos centrais da teoria de memória virtual:
++ *Superioridade do LRU sob Localidade Temporal:* Em $n = 1$ com $M = 6$ molduras, o FIFO permanece estagnado em $308$ faltas ($26,8%$), pois expulsa ciclicamente a página de código do laço interno quente pelo simples fato de ela ter sido carregada no início do processo. O LRU preserva as páginas recentemente referenciadas e reduz as faltas para $226$ ($-26,6%$). Em $n = 4$ com $M = 6$, o LRU evita $94$ faltas em relação ao FIFO ($361$ contra $455$, redução de $20,7%$);
++ *Pressão de Memória Multicore e Thrashing:* Enquanto no modo sequencial ($n = 1$) $M = 8$ molduras bastam para acomodar o _working set_ [8] individual de cada tarefa e atingir o piso de $25$ faltas compulsórias (_cold-start misses_, $2,17%$), na execução paralela em $n = 4$ núcleos quatro processos disputam simultaneamente o _Core Map_ global. Com $M = 4$ (apenas 1 moldura por núcleo ativo), a taxa de faltas no FIFO atinge $48,1%$ ($553$ faltas e $82$ _write-backs_), caracterizando _thrashing_; o piso de faltas compulsórias só é alcançado quando $M >= 24$ comporta a soma dos conjuntos de trabalho concorrentes;
++ *Padrões Cíclicos e Distância para o Ótimo (OPT):* Em $n = 4$ e $M = 16$, observa-se o caso clássico descrito por Silberschatz [2] em que uma varredura cíclica ligeiramente maior que o número de molduras disponíveis penaliza o LRU ($185$ faltas) frente ao FIFO ($157$ faltas), ao passo que o algoritmo clarividente OPT de Belady reduz as faltas para apenas $70$ ($6,1%$), comprovando seu papel como limite inferior inatingível por políticas puramente causais;
++ *Verificação da Anomalia de Belady:* Submetendo a cadeia canônica de Belady et al. [6] ($angle.l 1,2,3,4,1,2,5,1,2,3,4,5 angle.r$) à MMU implementada e ao verificador `opt_belady.py`, constatou-se que a ampliação de $M = 3$ para $M = 4$ molduras *eleva* as faltas do FIFO de $9$ para $10$, ao passo que no LRU as faltas caem monotonicamente de $10$ para $8$ (e no OPT de $7$ para $6$), confirmando empiricamente a propriedade de inclusão dos algoritmos de pilha [7].
+
+#figure(
+  image("fig_e4_faltas.png", width: 98%),
+  caption: [Curva de faltas de página em função do número de molduras de usuário ($M$) para FIFO, LRU e OPT de Belady (Experimento E4).],
+) <fig-e4-faltas>
+
 = VII. Conclusão
 _[Seção sob responsabilidade de Otávio Hiratsuka]_
 
@@ -139,4 +211,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
 + A. S. Tanenbaum e H. Bos, _Modern Operating Systems_, 4ª ed., Pearson, 2015.
 + G. M. Amdahl, "Validity of the single processor approach to achieving large scale computing capabilities", _AFIPS Conf. Proc._, 1967.
 + L. A. Belady, "A study of replacement algorithms for a virtual-storage computer", _IBM Systems Journal_, 1966.
++ L. A. Belady, R. A. Nelson e G. S. Shedler, "An anomaly in space-time characteristics of certain programs running in a paging machine", _Communications of the ACM_, 12(6), 1969.
++ R. L. Mattson, J. Gecsei, D. R. Slutz e I. L. Traiger, "Evaluation techniques for storage hierarchies", _IBM Systems Journal_, 9(2), 1970.
++ P. J. Denning, "The working set model for program behavior", _Communications of the ACM_, 11(5), 1968.
 ]
