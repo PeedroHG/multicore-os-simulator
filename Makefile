@@ -27,6 +27,7 @@ COMMON_SRCS := \
     $(SRC_DIR)/kernel.cpp \
     $(SRC_DIR)/config.cpp \
     $(SRC_DIR)/memory.cpp \
+    $(SRC_DIR)/mmu.cpp \
     $(CONTROL_DIR)/control_unit.cpp \
     $(CPU_DIR)/cpu.cpp \
     $(REG_DIR)/register_bank.cpp \
@@ -51,8 +52,9 @@ TEST_CONTROL_BIN := $(BUILD_DIR)/test_control_unit
 TEST_MEM_BIN     := $(BUILD_DIR)/test_memoria
 TEST_CPU_MEM_BIN := $(BUILD_DIR)/test_cpu_memoria
 TEST_MULTICORE_BIN := $(BUILD_DIR)/test_multicore
+TEST_MMU_BIN       := $(BUILD_DIR)/test_mmu
 
-.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore benchmark artigo clean help
+.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore test_mmu experimento_e4 benchmark artigo clean help
 
 # Target padrão
 all: $(TARGET)
@@ -157,11 +159,26 @@ test_multicore: $(TEST_MULTICORE_BIN)
 	@echo "--- Executando Testes Multicore & Baseline ---"
 	@./$(TEST_MULTICORE_BIN)
 
+$(TEST_MMU_BIN): tests/test_mmu.cpp $(COMMON_OBJS)
+	@mkdir -p $(BUILD_DIR)/tests
+	@echo "==> Compilando: $<"
+	$(CXX) $(CXXFLAGS) -c $< -o $(BUILD_DIR)/tests/test_mmu.o
+	$(CXX) $(CXXFLAGS) $(BUILD_DIR)/tests/test_mmu.o $(COMMON_OBJS) -o $@
+
+test_mmu: $(TEST_MMU_BIN)
+	@echo ""
+	@echo "--- Executando Testes da MMU (Paginacao FIFO/LRU) ---"
+	@./$(TEST_MMU_BIN)
+
+# Experimento E4: faltas x molduras (FIFO vs LRU vs OPT de Belady)
+experimento_e4: $(TARGET)
+	@./scripts/experimento_e4.sh
+
 benchmark: $(TARGET)
 	@./scripts/benchmark.sh
 
 # Executa todos os testes
-test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_memoria test_multicore
+test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_memoria test_multicore test_mmu
 	@echo ""
 	@echo "=========================================="
 	@echo "  TODOS OS TESTES PASSARAM COM SUCESSO!   "
@@ -206,6 +223,8 @@ help:
 	@echo "  make test_cpu       - Executa o teste de integração da CPU"
 	@echo "  make test_memoria   - Executa os testes unitários de Memória"
 	@echo "  make test_cpu_memoria - Executa os testes de integração CPU + Memória"
+	@echo "  make test_mmu       - Executa os testes da MMU (paginacao, FIFO, LRU, write-back)"
+	@echo "  make experimento_e4 - Roda o Experimento E4 (faltas x molduras, FIFO/LRU/OPT)"
 	@echo "  make benchmark      - Executa bateria de benchmarks multicore"
 	@echo "  make artigo         - Compila o artigo IEEE e salva ./artigo.pdf na raiz"
 	@echo "  make clean          - Remove os binários e diretório de build"
