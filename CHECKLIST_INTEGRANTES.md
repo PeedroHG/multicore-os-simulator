@@ -149,14 +149,14 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 ## 👤 Otávio Hiratsuka (Métricas, Bateria de Testes, Gráficos & Integração do Artigo)
 
 ### Fase 1: Padronização das Métricas e Estrutura de Exportação (até 08/11)
-- [ ] Atualizar `loader/metrics.hpp` e `loader/metrics.cpp` com as fórmulas formais:
-  - [ ] Métricas por processo: Tempo de Espera ($TE_i$), Tempo de Retorno/Turnaround ($TR_i = \text{cicloFim}_i$), trocas de contexto e faltas de página.
-  - [ ] Métricas do sistema: Tempo Médio de Espera (TME), Tempo Médio de Retorno (TMR), Makespan global.
-  - [ ] Métricas de CPU: Utilização média global e Utilização útil (descontando *stall* e troca de contexto).
-  - [ ] Métricas por núcleo: Eficiência de cada núcleo $k$ ($\text{ocupado}_k / \text{makespan}$).
-  - [ ] Throughput global: $N / \text{makespan}$ (processos por 1.000 ciclos).
-  - [ ] Speedup $S(n) = \text{makespan}(1) / \text{makespan}(n)$ e Eficiência Paralela $E(n) = S(n) / n$.
-- [ ] Atualizar `loader/reporter.cpp`:
+- [x] Atualizar `loader/metrics.hpp` e `loader/metrics.cpp` com as fórmulas formais:
+  - [x] Métricas por processo: Tempo de Espera ($TE_i$), Tempo de Retorno/Turnaround ($TR_i = \text{cicloFim}_i$), trocas de contexto e faltas de página.
+  - [x] Métricas do sistema: Tempo Médio de Espera (TME), Tempo Médio de Retorno (TMR), Makespan global.
+  - [x] Métricas de CPU: Utilização média global e Utilização útil (descontando *stall* e troca de contexto).
+  - [x] Métricas por núcleo: Eficiência de cada núcleo $k$ ($\text{ocupado}_k / \text{makespan}$).
+  - [x] Throughput global: $N / \text{makespan}$ (processos por 1.000 ciclos).
+  - [x] Speedup $S(n) = \text{makespan}(1) / \text{makespan}(n)$ e Eficiência Paralela $E(n) = S(n) / n$.
+- [x] Atualizar `loader/reporter.cpp`:
   - [ ] Exportação determinística de arquivos em diretório `--saida`: `processos.csv`, `nucleos.csv`, `resumo.csv` e log detalhado da execução (sem truncamento ou anexos acidentais).
 
 ### Fase 2: Construção dos Lotes Experimentais Realistas (até 22/11)

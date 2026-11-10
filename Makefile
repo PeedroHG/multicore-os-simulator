@@ -51,8 +51,9 @@ TEST_CONTROL_BIN := $(BUILD_DIR)/test_control_unit
 TEST_MEM_BIN     := $(BUILD_DIR)/test_memoria
 TEST_CPU_MEM_BIN := $(BUILD_DIR)/test_cpu_memoria
 TEST_MULTICORE_BIN := $(BUILD_DIR)/test_multicore
+TEST_METRICAS_BIN := $(BUILD_DIR)/test_metricas
 
-.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore benchmark artigo clean help
+.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore test_metricas benchmark artigo clean help
 
 # Target padrão
 all: $(TARGET)
@@ -157,11 +158,22 @@ test_multicore: $(TEST_MULTICORE_BIN)
 	@echo "--- Executando Testes Multicore & Baseline ---"
 	@./$(TEST_MULTICORE_BIN)
 
+$(TEST_METRICAS_BIN): tests/teste_metricas.cpp $(COMMON_OBJS)
+	@mkdir -p $(BUILD_DIR)/tests
+	@echo "==> Compilando: $<"
+	$(CXX) $(CXXFLAGS) -c $< -o $(BUILD_DIR)/tests/teste_metricas.o
+	$(CXX) $(CXXFLAGS) $(BUILD_DIR)/tests/teste_metricas.o $(COMMON_OBJS) -o $@
+
+test_metricas: $(TEST_METRICAS_BIN)
+	@echo ""
+	@echo "--- Executando Testes de Metricas ---"
+	@./$(TEST_METRICAS_BIN)
+
 benchmark: $(TARGET)
 	@./scripts/benchmark.sh
 
 # Executa todos os testes
-test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_memoria test_multicore
+test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_memoria test_multicore test_metricas
 	@echo ""
 	@echo "=========================================="
 	@echo "  TODOS OS TESTES PASSARAM COM SUCESSO!   "
@@ -206,6 +218,8 @@ help:
 	@echo "  make test_cpu       - Executa o teste de integração da CPU"
 	@echo "  make test_memoria   - Executa os testes unitários de Memória"
 	@echo "  make test_cpu_memoria - Executa os testes de integração CPU + Memória"
+	@echo "  make test_multicore - Executa os testes multicore e baseline"
+	@echo "  make test_metricas  - Executa os testes de metricas e exportacao CSV"
 	@echo "  make benchmark      - Executa bateria de benchmarks multicore"
 	@echo "  make artigo         - Compila o artigo IEEE e salva ./artigo.pdf na raiz"
 	@echo "  make clean          - Remove os binários e diretório de build"
