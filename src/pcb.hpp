@@ -51,6 +51,8 @@ struct PCB {
     uint64_t ciclosStall = 0;
     uint32_t trocasContexto = 0;
     uint32_t faltasPagina = 0;
+    uint64_t acessosMemoria = 0;
+    uint64_t writeBacks = 0;
     int ultimoCore = -1;
 
     PCB() = default;

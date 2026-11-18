@@ -1,5 +1,6 @@
 #include "control_unit.hpp"
 #include "../../memory.hpp"
+#include "../../mmu.hpp"
 #include <stdexcept>
 #include <string>
 
@@ -13,13 +14,66 @@ void ControlUnit::reset() { haltStatus = false; }
 bool ControlUnit::isHalted() const { return haltStatus; }
 
 // ----------------------------------------------------------------------------
+// Barramento de Memória (MMU ou modo legado)
+// ----------------------------------------------------------------------------
+void ControlUnit::conectarMMU(InterfaceMMU *m, PCB *pcb, int coreId,
+                              uint64_t tick) {
+  mmu = m;
+  pcbAtual = pcb;
+  coreIdAtual = coreId;
+  tickAtual = tick;
+  penalidadeAcumulada = 0;
+}
+
+void ControlUnit::desconectarMMU() {
+  mmu = nullptr;
+  pcbAtual = nullptr;
+  penalidadeAcumulada = 0;
+}
+
+uint32_t ControlUnit::consumirPenalidade() {
+  uint32_t p = penalidadeAcumulada;
+  penalidadeAcumulada = 0;
+  return p;
+}
+
+// Com MMU, os endereços são lógicos (base 0). Sem MMU (legado), o job fica
+// na RAM física a partir de OS_RESERVED_MEM.
+uint16_t ControlUnit::baseEnderecamento() const {
+  return mmu ? 0 : OS_RESERVED_MEM;
+}
+
+uint16_t ControlUnit::lerBarramento(uint16_t endereco, bool busca) {
+  if (!mmu) {
+    // Legado: o PC já é físico; endereços de dados são relativos à base.
+    return LerMemoria(busca ? endereco : endereco + OS_RESERVED_MEM);
+  }
+  ResultadoAcesso r =
+      mmu->ler(*pcbAtual, endereco, coreIdAtual, tickAtual,
+               busca ? TipoAcesso::BUSCA : TipoAcesso::LEITURA);
+  penalidadeAcumulada += r.ciclosPenalidade;
+  return r.valor;
+}
+
+void ControlUnit::escreverBarramento(uint16_t endereco, uint16_t dado) {
+  if (!mmu) {
+    EscreverMemoria(endereco + OS_RESERVED_MEM, dado);
+    return;
+  }
+  ResultadoAcesso r =
+      mmu->escrever(*pcbAtual, endereco, dado, coreIdAtual, tickAtual);
+  penalidadeAcumulada += r.ciclosPenalidade;
+}
+
+// ----------------------------------------------------------------------------
 // Etapa 1: BUSCA (Fetch)
 // ----------------------------------------------------------------------------
 uint16_t ControlUnit::fetch(RegisterBank &regBank) {
   // Lê a instrução de 16 bits apontada pelo PC, através da Interface de
-  // Memória (nunca acessando o vetor RAM diretamente).
+  // Memória (nunca acessando o vetor RAM diretamente). Com MMU, o PC é
+  // lógico e a busca também é traduzida (e pode gerar falta de página).
   uint16_t pc = regBank.getPC();
-  uint16_t IR = LerMemoria(pc);
+  uint16_t IR = lerBarramento(pc, true);
 
   regBank.setIR(IR);
   regBank.incrementPC(); // Avança o PC para a próxima palavra
@@ -75,15 +129,14 @@ void ControlUnit::execute(const InstrucaoDecodificada &instr,
 
   // --- Transferência de Memória (Paradigma Load/Store) ---
   case OP_LOAD:
-    // RAM -> Registrador. Endereço do job é relativo; soma-se a base
-    // reservada ao SO para obter o endereço físico real.
-    regBank.write(instr.regDest, LerMemoria(instr.endereco + OS_RESERVED_MEM));
+    // RAM -> Registrador. Endereço do job é relativo: com MMU é traduzido
+    // (lógico -> físico); no modo legado soma-se a base reservada ao SO.
+    regBank.write(instr.regDest, lerBarramento(instr.endereco, false));
     break;
 
   case OP_STORE:
     // Registrador -> RAM.
-    EscreverMemoria(instr.endereco + OS_RESERVED_MEM,
-                    regBank.read(instr.regDest));
+    escreverBarramento(instr.endereco, regBank.read(instr.regDest));
     break;
 
   // --- Aritmética e Lógica (delegadas integralmente à ULA) ---
@@ -103,14 +156,14 @@ void ControlUnit::execute(const InstrucaoDecodificada &instr,
     // de uma subtração: se (regDest - regF1) == 0, os valores são iguais.
     ula.execute(SUB, regBank.read(instr.regDest), regBank.read(instr.regF1));
     if (ula.result == 0) {
-      regBank.setPC(instr.endereco + OS_RESERVED_MEM);
+      regBank.setPC(instr.endereco + baseEnderecamento());
     }
     break;
 
   case OP_JUMP:
     // Salto incondicional: a UC altera o PC diretamente (não é
     // responsabilidade da ULA, conforme diretrizes do projeto).
-    regBank.setPC(instr.enderecoJump + OS_RESERVED_MEM);
+    regBank.setPC(instr.enderecoJump + baseEnderecamento());
     break;
 
   // --- Sistema ---

@@ -22,10 +22,10 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 - [x] Adaptar a classe `CPU` (`src/cpu/cpu.hpp` e `src/cpu/cpu.cpp`):
   - [x] Adicionar identificador do núcleo (`int coreId`), ponteiro para processo atual (`PCB* processoAtual`) e contador de instrução multictick (`uint32_t ciclosRestantes`).
   - [x] Implementar `salvarContexto(PCB&)` e `restaurarContexto(const PCB&)` integrados ao `RegisterBank` e `ControlUnit`.
-- [ ] Atualizar `ControlUnit` (`src/cpu/control/control_unit.cpp`):
-  - [ ] Remover a adição estática de `+ OS_RESERVED_MEM` em `LOAD`, `STORE`, `BEQ` e `JUMP`.
-  - [ ] Redirecionar todas as leituras e escritas (inclusive o `fetch` de instruções) para a MMU, passando `endLogico`, `pid` e `coreId`.
-  - [ ] Inicializar o PC lógico sempre em `0x000`.
+- [x] Atualizar `ControlUnit` (`src/cpu/control/control_unit.cpp`):
+  - [x] Remover a adição estática de `+ OS_RESERVED_MEM` em `LOAD`, `STORE`, `BEQ` e `JUMP`.
+  - [x] Redirecionar todas as leituras e escritas (inclusive o `fetch` de instruções) para a MMU, passando `endLogico`, `pid` e `coreId`.
+  - [x] Inicializar o PC lógico sempre em `0x000`.
 - [x] Implementar o `Kernel` (`src/kernel.cpp`):
   - [x] Instanciar `std::vector<CPU> cores(n)`.
   - [x] Laço determinístico de clock global: a cada tick `t`, iterar núcleos de `0` até `n-1`.
@@ -53,53 +53,53 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
 ## 👤 João Paulo (Gerenciamento de Memória - Paginação, Modelo Tanenbaum)
 
 ### Fase 1: Interfaces, Fatiamento de Bits e MMU Provisória (até 08/11)
-- [ ] Definir constantes e máscaras de paginação em `src/defines.hpp`:
-  - [ ] `BITS_OFFSET = 4`, `TAM_PAGINA = 16` palavras.
-  - [ ] `MASK_OFFSET = 0x000F`.
-  - [ ] `MAX_END_LOGICO = 0x0FFF` (12 bits; bits `[15:12]` devem ser 0).
-  - [ ] `MOLDURAS_SO = 32` (512 palavras reservadas ao SO / 16).
-  - [ ] Macros/funções inline `extrairPagina(e)` e `extrairOffset(e)`.
-- [ ] Criar `src/mmu.hpp` com a interface definitiva:
-  - [ ] `enum class PoliticaSubstituicao { FIFO, LRU }`.
-  - [ ] `struct ResultadoAcesso { uint16_t valor; uint32_t ciclosPenalidade; bool falta; }`.
-  - [ ] Assinaturas de `ler()`, `escrever()`, `carregarProcesso()` e `liberarProcesso()`.
-- [ ] Implementar uma **MMU Provisória (Stub)**:
-  - [ ] Tradução direta sem faltas (`fisico = 512 + pid * 256 + logico`) para destravar o desenvolvimento das Pessoas 1 e 3 já na Fase 2.
+- [x] Definir constantes e máscaras de paginação em `src/defines.hpp`:
+  - [x] `BITS_OFFSET = 4`, `TAM_PAGINA = 16` palavras.
+  - [x] `MASK_OFFSET = 0x000F`.
+  - [x] `MAX_END_LOGICO = 0x0FFF` (12 bits; bits `[15:12]` devem ser 0).
+  - [x] `MOLDURAS_SO = 32` (512 palavras reservadas ao SO / 16).
+  - [x] Macros/funções inline `extrairPagina(e)` e `extrairOffset(e)`.
+- [x] Criar `src/mmu.hpp` com a interface definitiva:
+  - [x] `enum class PoliticaSubstituicao { FIFO, LRU }`.
+  - [x] `struct ResultadoAcesso { uint16_t valor; uint32_t ciclosPenalidade; bool falta; }`.
+  - [x] Assinaturas de `ler()`, `escrever()`, `carregarProcesso()` e `liberarProcesso()`.
+- [x] Implementar uma **MMU Provisória (Stub)**:
+  - [x] Tradução direta sem faltas (`fisico = 512 + pid * 256 + logico`) para destravar o desenvolvimento das Pessoas 1 e 3 já na Fase 2.
 
 ### Fase 2: Implementação da MMU Real, FIFO e LRU (até 22/11)
-- [ ] Implementar a tabela de molduras de página (*Core Map*) em `src/mmu.cpp`:
-  - [ ] Estrutura para cada moldura: `livre`, `pid`, `pagina`, `carregadaEm` (FIFO), `ultimoAcesso` (LRU via contador monotônico global de acessos).
-  - [ ] Suporte a `NUM_MOLDURAS_USUARIO` configurável (escassez forçada: 4 a 32 molduras).
-- [ ] Implementar as estruturas do Disco Virtual para paginação sob demanda:
-  - [ ] Alocar imagem de memória por processo no disco simulado.
-  - [ ] Inicializar páginas lógicas dos processos como inválidas (`valida = false`).
-- [ ] Implementar algoritmo de substituição global **FIFO**:
-  - [ ] Fila circular de molduras alocadas; seleção da moldura carregada há mais tempo.
-- [ ] Implementar algoritmo de substituição global **LRU**:
-  - [ ] Atualização de contador monotônico a cada acesso; seleção da moldura com menor carimbo de acesso.
-- [ ] Implementar o tratamento de Falta de Página (*Page Fault*):
-  - [ ] Detecção de página inválida.
-  - [ ] *Write-back* no Disco Virtual se a página vítima estiver suja (`suja == true`).
-  - [ ] Cópia da página do Disco Virtual para a moldura física na RAM e atualização da tabela de páginas do PCB.
-  - [ ] Cálculo da penalidade em ciclos (`PENALIDADE_FALTA = 50` + 50 adicionais se houver *write-back*).
-- [ ] Gerar arquivo de rastro de referências de memória `referencias_memoria.csv` com `(tick, core, pid, pagina, tipo_acesso)`.
-- [ ] Atualizar `loader/ram_loader.cpp` para carregar dados/instruções para a imagem em Disco Virtual em vez de escrever direto na RAM física.
+- [x] Implementar a tabela de molduras de página (*Core Map*) em `src/mmu.cpp`:
+  - [x] Estrutura para cada moldura: `livre`, `pid`, `pagina`, `carregadaEm` (FIFO), `ultimoAcesso` (LRU via contador monotônico global de acessos).
+  - [x] Suporte a `NUM_MOLDURAS_USUARIO` configurável (escassez forçada: 4 a 32 molduras).
+- [x] Implementar as estruturas do Disco Virtual para paginação sob demanda:
+  - [x] Alocar imagem de memória por processo no disco simulado.
+  - [x] Inicializar páginas lógicas dos processos como inválidas (`valida = false`).
+- [x] Implementar algoritmo de substituição global **FIFO**:
+  - [x] Fila circular de molduras alocadas; seleção da moldura carregada há mais tempo.
+- [x] Implementar algoritmo de substituição global **LRU**:
+  - [x] Atualização de contador monotônico a cada acesso; seleção da moldura com menor carimbo de acesso.
+- [x] Implementar o tratamento de Falta de Página (*Page Fault*):
+  - [x] Detecção de página inválida.
+  - [x] *Write-back* no Disco Virtual se a página vítima estiver suja (`suja == true`).
+  - [x] Cópia da página do Disco Virtual para a moldura física na RAM e atualização da tabela de páginas do PCB.
+  - [x] Cálculo da penalidade em ciclos (`PENALIDADE_FALTA = 50` + 50 adicionais se houver *write-back*).
+- [x] Gerar arquivo de rastro de referências de memória `referencias_memoria.csv` com `(tick, core, pid, pagina, tipo_acesso)`.
+- [x] Atualizar `loader/ram_loader.cpp` para carregar dados/instruções para a imagem em Disco Virtual em vez de escrever direto na RAM física.
 
 ### Fase 3: Integração, Validação e OPT de Belady (até 29/11)
-- [ ] Integrar a MMU real no Kernel (substituindo a MMU provisória).
-- [ ] Criar testes unitários em `tests/test_mmu.cpp`:
-  - [ ] Teste de isolamento de memória entre processos com mesmo endereço virtual.
-  - [ ] Teste determinístico de faltas de página e substituição com FIFO.
-  - [ ] Teste determinístico de substituição com LRU.
-  - [ ] Teste de gravação de *dirty bit* e *write-back* em instruções `STORE`.
-- [ ] Criar script `scripts/opt_belady.py` para calcular o algoritmo ótimo offline (OPT de Belady) a partir do CSV de referências e detectar a Anomalia de Belady no FIFO.
+- [x] Integrar a MMU real no Kernel (substituindo a MMU provisória).
+- [x] Criar testes unitários em `tests/test_mmu.cpp`:
+  - [x] Teste de isolamento de memória entre processos com mesmo endereço virtual.
+  - [x] Teste determinístico de faltas de página e substituição com FIFO.
+  - [x] Teste determinístico de substituição com LRU.
+  - [x] Teste de gravação de *dirty bit* e *write-back* em instruções `STORE`.
+- [x] Criar script `scripts/opt_belady.py` para calcular o algoritmo ótimo offline (OPT de Belady) a partir do CSV de referências e detectar a Anomalia de Belady no FIFO.
 
 ### Fase 4: Artigo IEEE & Análise de Resultados (até 05/12)
-- [ ] Redigir a seção de **Gerenciamento de Memória (Modelo Tanenbaum)**:
-  - [ ] Justificar o modelo de paginação (bloco fixo + deslocamento), fatiamento 8+4 lógico e 12+4 físico.
-  - [ ] Detalhar tabela de páginas por processo, tabela de molduras (*core map*) e paginação sob demanda.
-- [ ] Desenhar o **Fluxograma da MMU** (Tradução de Endereços, Hit, Falta de Página e Substituição).
-- [ ] Analisar e discutir os dados do **Experimento E4** (Taxa de faltas × número de molduras, comparação FIFO vs LRU vs OPT, discussão sobre Anomalia de Belady).
+- [x] Redigir a seção de **Gerenciamento de Memória (Modelo Tanenbaum)**:
+  - [x] Justificar o modelo de paginação (bloco fixo + deslocamento), fatiamento 8+4 lógico e 12+4 físico.
+  - [x] Detalhar tabela de páginas por processo, tabela de molduras (*core map*) e paginação sob demanda.
+- [x] Desenhar o **Fluxograma da MMU** (Tradução de Endereços, Hit, Falta de Página e Substituição).
+- [x] Analisar e discutir os dados do **Experimento E4** (Taxa de faltas × número de molduras, comparação FIFO vs LRU vs OPT, discussão sobre Anomalia de Belady).
 
 ---
 
