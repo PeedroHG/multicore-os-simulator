@@ -12,6 +12,8 @@ Kernel::Kernel(int nCores, uint32_t custoTroca, uint32_t limiteInst)
     for (int i = 0; i < numCores; ++i) {
         cores.emplace_back(i);
     }
+    contadoresNucleo.assign(numCores, ContadoresNucleo{});
+    ultimoPidNucleo.assign(numCores, -1);
 }
 
 void Kernel::admitirProcesso(std::unique_ptr<PCB> pcb) {
@@ -58,11 +60,6 @@ bool Kernel::temProcessosAtivos() const {
 
 // Executa 1 ciclo de clock global em lockstep
 void Kernel::executarPasso() {
-    // 1. Atualiza métrica de tempo de espera para quem está na fila de prontos
-    for (PCB* pcb : processosProntos) {
-        pcb->ciclosEspera++;
-    }
-
     // 2. Itera por cada núcleo de 0 até numCores - 1 de forma síncrona
     for (int i = 0; i < numCores; ++i) {
         CPU& core = cores[i];
@@ -72,6 +69,7 @@ void Kernel::executarPasso() {
             core.decrementarStall();
             if (PCB* p = core.getProcessoAtual()) {
                 p->ciclosStall++;
+                contadoresNucleo[i].ciclosStall++;
                 if (!core.emStall() && core.isHalted()) {
                     core.salvarContexto(*p);
                     encerrarProcesso(core, p, EstadoProcesso::FINALIZADO, tickGlobal + 1);
@@ -90,6 +88,14 @@ void Kernel::executarPasso() {
                 proximo->cicloInicio = tickGlobal;
             }
 
+            // Métricas: despacho e troca de contexto (só conta quando o PID muda no núcleo)
+            contadoresNucleo[i].despachos++;
+            if (ultimoPidNucleo[i] != proximo->pid) {
+                contadoresNucleo[i].trocasContexto++;
+                proximo->trocasContexto++;
+            }
+            ultimoPidNucleo[i] = proximo->pid;
+
             core.restaurarContexto(*proximo);
         }
 
@@ -98,6 +104,7 @@ void Kernel::executarPasso() {
             PCB* atual = core.getProcessoAtual();
             atual->ciclosExecucao++;
             atual->quantumUsado++;
+            contadoresNucleo[i].ciclosExecucao++;
 
             try {
                 // Proteção contra loops infinitos
@@ -132,6 +139,13 @@ void Kernel::executarPasso() {
         }
     }
 
+    // Tempo de espera (TE_i): só quem continua na fila de prontos DEPOIS do despacho
+    // deste tick esperou; quem foi despachado agora já executou neste mesmo tick.
+    // (Contar antes do despacho somava +1 em todo processo: TE + exec + stall > cicloFim.)
+    for (PCB* pcb : processosProntos) {
+        pcb->ciclosEspera++;
+    }
+
     tickGlobal++;
 }
 
@@ -140,4 +154,3 @@ void Kernel::rodarSimulacao() {
         executarPasso();
     }
 }
-

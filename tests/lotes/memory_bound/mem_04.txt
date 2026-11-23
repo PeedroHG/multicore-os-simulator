@@ -1,0 +1,42 @@
+// mem_04.txt - Memory-bound: ciclo de 6 paginas, metade com escrita; 30 iteracoes; paginas de dados [3, 4, 7, 8, 11, 12]
+// Instrucoes estaticas: 25 | executadas: 548 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+1430 // 0x008: LOAD  R4, [0x30]
+2334 // 0x009: ADD   R3, R3, R4
+3330 // 0x00a: STORE R3, [0x30]
+1440 // 0x00b: LOAD  R4, [0x40]
+2334 // 0x00c: ADD   R3, R3, R4
+1470 // 0x00d: LOAD  R4, [0x70]
+2334 // 0x00e: ADD   R3, R3, R4
+3370 // 0x00f: STORE R3, [0x70]
+1480 // 0x010: LOAD  R4, [0x80]
+2334 // 0x011: ADD   R3, R3, R4
+14B0 // 0x012: LOAD  R4, [0xb0]
+2334 // 0x013: ADD   R3, R3, R4
+33B0 // 0x014: STORE R3, [0xb0]
+14C0 // 0x015: LOAD  R4, [0xc0]
+2334 // 0x016: ADD   R3, R3, R4
+4221 // 0x017: SUB   R2, R2, R1
+8007 // 0x018: JUMP  0x007
+
+.data
+30 0151
+40 01C1
+70 0311
+80 0381
+B0 04D1
+C0 0541
+F0 0000
+F1 0001
+F2 001E
+F3 0003
+F4 0000

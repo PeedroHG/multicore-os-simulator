@@ -1,0 +1,33 @@
+// misto_02_cpu_longo.txt - Misto: CPU-bound longo (~2400 instr.)
+// Instrucoes estaticas: 20 | executadas: 2608 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+.priority 8
+.estimate 2608
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+2332 // 0x008: ADD   R3, R3, R2
+4431 // 0x009: SUB   R4, R3, R1
+5543 // 0x00a: AND   R5, R4, R3
+6652 // 0x00b: OR    R6, R5, R2
+2764 // 0x00c: ADD   R7, R6, R4
+4375 // 0x00d: SUB   R3, R7, R5
+2443 // 0x00e: ADD   R4, R4, R3
+6541 // 0x00f: OR    R5, R4, R1
+5657 // 0x010: AND   R6, R5, R7
+2336 // 0x011: ADD   R3, R3, R6
+4221 // 0x012: SUB   R2, R2, R1
+8007 // 0x013: JUMP  0x007
+
+.data
+F0 0000
+F1 0001
+F2 00C8
+F3 0001
+F4 0000

@@ -1,6 +1,11 @@
 // Teste de metricas e exportacao (valores calculados a mao).
 // Cenario: 2 nucleos, 3 processos, makespan 100, baseline n=1 com makespan 180.
 #include "loader/reporter.hpp"
+#include "loader/coletor.hpp"
+#include "loader/parser.hpp"
+#include "src/kernel.hpp"
+#include "src/mmu.hpp"
+#include <memory>
 
 #include <cmath>
 #include <cstdlib>
@@ -43,7 +48,40 @@ static ResultadoExecucao cenario() {
     return r;
 }
 
+// Integracao Kernel + MMU + Coletor: os contadores reais devem fechar as
+// invariantes da Secao 2.4 (TE + exec + stall == cicloFim; somas por processo
+// == somas por nucleo) para qualquer numero de nucleos.
+static void testarColetorComKernel() {
+    for (int nucleos : {1, 2, 4}) {
+        MMU mmu(PoliticaSubstituicao::FIFO, 8, 50);
+        Kernel kernel(nucleos, 5);
+        kernel.conectarMMU(&mmu);
+        const char* jobs[] = {"tests/job1_soma.txt", "tests/job2_vetor.txt", "tests/job3_loop.txt"};
+        for (int i = 0; i < 3; ++i) {
+            JobData job;
+            CHECK(JobParser::carregarArquivo(jobs[i], job));
+            auto pcb = std::make_unique<PCB>(i + 1, jobs[i]);
+            mmu.carregarProcesso(*pcb, job);
+            kernel.admitirProcesso(std::move(pcb));
+        }
+        kernel.rodarSimulacao();
+
+        ConfigExperimento ce;
+        ce.nucleos = static_cast<uint32_t>(nucleos);
+        ResultadoExecucao r = coletarResultado(kernel, mmu, ce);
+
+        CHECK(r.processos.size() == 3 && r.nucleos.size() == static_cast<std::size_t>(nucleos));
+        CHECK(Metricas::verificarConsistencia(r).empty());
+        for (const auto& p : r.processos) {
+            CHECK(p.tempoEspera + p.ciclosExecucao + p.ciclosStall == p.cicloFim);
+            CHECK(p.instrucoes == p.ciclosExecucao);   // 1 instrucao por ciclo de execucao
+        }
+        CHECK(r.resumo.concluidos == 3 && r.resumo.makespan == kernel.getTickGlobal());
+    }
+}
+
 int main() {
+    testarColetorComKernel();
     ResultadoExecucao r = cenario();
     Metricas::consolidar(r);
     Metricas::aplicarSpeedup(r, 180);

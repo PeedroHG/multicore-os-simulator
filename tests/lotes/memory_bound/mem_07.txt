@@ -1,0 +1,37 @@
+// mem_07.txt - Memory-bound: 2 paginas quentes alternadas, escrita pesada; 70 iteracoes; paginas de dados [5, 9]
+// Instrucoes estaticas: 22 | executadas: 1058 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+1450 // 0x008: LOAD  R4, [0x50]
+2334 // 0x009: ADD   R3, R3, R4
+3350 // 0x00a: STORE R3, [0x50]
+1490 // 0x00b: LOAD  R4, [0x90]
+2334 // 0x00c: ADD   R3, R3, R4
+3390 // 0x00d: STORE R3, [0x90]
+1454 // 0x00e: LOAD  R4, [0x54]
+2334 // 0x00f: ADD   R3, R3, R4
+3354 // 0x010: STORE R3, [0x54]
+1494 // 0x011: LOAD  R4, [0x94]
+2334 // 0x012: ADD   R3, R3, R4
+3394 // 0x013: STORE R3, [0x94]
+4221 // 0x014: SUB   R2, R2, R1
+8007 // 0x015: JUMP  0x007
+
+.data
+50 0231
+54 024D
+90 03F1
+94 040D
+F0 0000
+F1 0001
+F2 0046
+F3 0003
+F4 0000

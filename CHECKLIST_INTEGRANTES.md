@@ -157,13 +157,13 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [x] Throughput global: $N / \text{makespan}$ (processos por 1.000 ciclos).
   - [x] Speedup $S(n) = \text{makespan}(1) / \text{makespan}(n)$ e Eficiência Paralela $E(n) = S(n) / n$.
 - [x] Atualizar `loader/reporter.cpp`:
-  - [ ] Exportação determinística de arquivos em diretório `--saida`: `processos.csv`, `nucleos.csv`, `resumo.csv` e log detalhado da execução (sem truncamento ou anexos acidentais).
+  - [x] Exportação determinística de arquivos em diretório `--saida`: `processos.csv`, `nucleos.csv`, `resumo.csv` e log detalhado da execução (sem truncamento ou anexos acidentais).
 
 ### Fase 2: Construção dos Lotes Experimentais Realistas (até 22/11)
-- [ ] Criar a pasta `tests/lotes/` com programas em Assembly RISC 16-bits respeitando as restrições da ISA (endereçamento imediato de 8 bits e trampolins para saltos com `BEQ`):
-  - [ ] **Lote CPU-Bound:** Jobs com laços longos e cálculo intensivo (centenas/milhares de instruções).
-  - [ ] **Lote Memory-Bound:** Jobs com variáveis e acessos espalhados por diferentes páginas (`0x00`, `0x40`, `0x80`, `0xC0`) para forçar concorrência na MMU.
-  - [ ] **Lote Misto:** Conjunto diversificado de jobs variando duração, acessos à memória e diretivas `.priority` e `.estimate`.
+- [x] Criar a pasta `tests/lotes/` com programas em Assembly RISC 16-bits respeitando as restrições da ISA (endereçamento imediato de 8 bits e trampolins para saltos com `BEQ`):
+  - [x] **Lote CPU-Bound:** Jobs com laços longos e cálculo intensivo (centenas/milhares de instruções).
+  - [x] **Lote Memory-Bound:** Jobs com variáveis e acessos espalhados por diferentes páginas (`0x00`, `0x40`, `0x80`, `0xC0`) para forçar concorrência na MMU.
+  - [x] **Lote Misto:** Conjunto diversificado de jobs variando duração, acessos à memória e diretivas `.priority` e `.estimate`.
 
 ### Fase 3: Automação de Gráficos e Execução dos Benchmarks (até 29/11)
 - [ ] Implementar o script em Python `scripts/gerar_graficos.py` (usando `matplotlib` e `seaborn`):

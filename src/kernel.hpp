@@ -9,6 +9,15 @@
 #include <memory>
 #include <functional>
 
+/** Contadores brutos por núcleo (alimentam nucleos.csv via Metricas::consolidar). */
+struct ContadoresNucleo {
+    uint64_t ciclosExecucao = 0; ///< ciclos com instrução em execução
+    uint64_t ciclosStall    = 0; ///< ciclos parado por falta de página
+    uint64_t ciclosTroca    = 0; ///< ciclos gastos em troca de contexto
+    uint32_t despachos      = 0; ///< processos despachados neste núcleo
+    uint32_t trocasContexto = 0; ///< despachos em que o PID mudou no núcleo
+};
+
 class Kernel {
 private:
     std::vector<CPU> cores;
@@ -16,6 +25,10 @@ private:
     uint64_t tickGlobal;
     uint32_t custoTrocaContexto;
     uint32_t limiteInstrucoesPorJob;
+
+    // Métricas por núcleo (Pessoa 4) e último PID despachado em cada núcleo
+    std::vector<ContadoresNucleo> contadoresNucleo;
+    std::vector<int> ultimoPidNucleo;
 
     // Fila de processos gerenciada pelo Kernel
     std::vector<PCB*> processosProntos;
@@ -38,6 +51,7 @@ public:
     int getNumCores() const { return numCores; }
     uint64_t getTickGlobal() const { return tickGlobal; }
     const std::vector<CPU>& getCores() const { return cores; }
+    const std::vector<ContadoresNucleo>& getContadoresNucleo() const { return contadoresNucleo; }
     std::vector<CPU>& getCores() { return cores; }
 
     // Gerenciamento de processos
@@ -50,4 +64,3 @@ public:
 };
 
 #endif // KERNEL_HPP
-

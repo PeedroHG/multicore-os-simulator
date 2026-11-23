@@ -1,0 +1,24 @@
+// cpu_01_soma.txt - CPU-bound: laco 'soma' com 40 iteracoes (so ALU, ~2 paginas de codigo)
+// Instrucoes estaticas: 13 | executadas: 248 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+2332 // 0x008: ADD   R3, R3, R2
+2443 // 0x009: ADD   R4, R4, R3
+5543 // 0x00a: AND   R5, R4, R3
+4221 // 0x00b: SUB   R2, R2, R1
+8007 // 0x00c: JUMP  0x007
+
+.data
+F0 0000
+F1 0001
+F2 0028
+F3 0001
+F4 0000

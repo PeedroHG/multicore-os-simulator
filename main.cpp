@@ -3,6 +3,8 @@
 #include "src/pcb.hpp"
 #include "src/mmu.hpp"
 #include "loader/parser.hpp"
+#include "loader/coletor.hpp"
+#include "loader/reporter.hpp"
 #include "src/memory.hpp"
 #include "src/defines.hpp"
 #include <filesystem>
@@ -102,6 +104,28 @@ int main(int argc, char* argv[]) {
         std::cout << "[MEMORIA] Rastro salvo em " << rastro << " | metricas em " << memCsv << "\n";
     } else {
         std::cerr << "[AVISO] Nao foi possivel gravar os CSVs de memoria em " << cfg.dirSaida << "\n";
+    }
+
+    // 8. Metricas formais (Secao 2.4): processos.csv, nucleos.csv, resumo.csv e execucao.log
+    ConfigExperimento ce;
+    ce.politica = cfg.politica;
+    ce.modo = cfg.modo;
+    ce.substituicao = cfg.substituicao;
+    ce.nucleos = static_cast<uint32_t>(cfg.numCores);
+    ce.quantum = (cfg.modo == "p") ? cfg.quantum : 0;
+    ce.molduras = cfg.numMolduras;
+    ce.penalidadeFalta = cfg.penalidadeFalta;
+    ce.custoTroca = cfg.custoTroca;
+    ce.aging = cfg.intervaloAging;
+
+    const ResultadoExecucao resultado = coletarResultado(kernel, *mmu, ce);
+    std::cout << "\n";
+    Reporter::exibirResumo(resultado);
+    if (Reporter::exportar(cfg.dirSaida, resultado)) {
+        std::cout << "[METRICAS] processos.csv, nucleos.csv, resumo.csv e execucao.log salvos em "
+                  << cfg.dirSaida << "\n";
+    } else {
+        std::cerr << "[AVISO] Falha ao exportar as metricas em " << cfg.dirSaida << "\n";
     }
 
     return 0;
