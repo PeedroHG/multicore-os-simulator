@@ -1,0 +1,35 @@
+// mem_09.txt - Memory-bound: ciclo longo de 4 paginas, 90 iteracoes; 90 iteracoes; paginas de dados [3, 8, 10, 13]
+// Instrucoes estaticas: 20 | executadas: 1178 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+1430 // 0x008: LOAD  R4, [0x30]
+2334 // 0x009: ADD   R3, R3, R4
+1480 // 0x00a: LOAD  R4, [0x80]
+2334 // 0x00b: ADD   R3, R3, R4
+3380 // 0x00c: STORE R3, [0x80]
+14A0 // 0x00d: LOAD  R4, [0xa0]
+2334 // 0x00e: ADD   R3, R3, R4
+14D0 // 0x00f: LOAD  R4, [0xd0]
+2334 // 0x010: ADD   R3, R3, R4
+33D0 // 0x011: STORE R3, [0xd0]
+4221 // 0x012: SUB   R2, R2, R1
+8007 // 0x013: JUMP  0x007
+
+.data
+30 0151
+80 0381
+A0 0461
+D0 05B1
+F0 0000
+F1 0001
+F2 005A
+F3 0003
+F4 0000

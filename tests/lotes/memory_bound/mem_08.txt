@@ -1,0 +1,49 @@
+// mem_08.txt - Memory-bound: ciclo de 7 paginas espalhadas (0x30..0xE0), leitura/escrita; 25 iteracoes; paginas de dados [3, 5, 7, 9, 11, 13, 14]
+// Instrucoes estaticas: 31 | executadas: 608 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+1430 // 0x008: LOAD  R4, [0x30]
+2334 // 0x009: ADD   R3, R3, R4
+3330 // 0x00a: STORE R3, [0x30]
+1450 // 0x00b: LOAD  R4, [0x50]
+2334 // 0x00c: ADD   R3, R3, R4
+3350 // 0x00d: STORE R3, [0x50]
+1470 // 0x00e: LOAD  R4, [0x70]
+2334 // 0x00f: ADD   R3, R3, R4
+3370 // 0x010: STORE R3, [0x70]
+1490 // 0x011: LOAD  R4, [0x90]
+2334 // 0x012: ADD   R3, R3, R4
+3390 // 0x013: STORE R3, [0x90]
+14B0 // 0x014: LOAD  R4, [0xb0]
+2334 // 0x015: ADD   R3, R3, R4
+33B0 // 0x016: STORE R3, [0xb0]
+14D0 // 0x017: LOAD  R4, [0xd0]
+2334 // 0x018: ADD   R3, R3, R4
+33D0 // 0x019: STORE R3, [0xd0]
+14E0 // 0x01a: LOAD  R4, [0xe0]
+2334 // 0x01b: ADD   R3, R3, R4
+33E0 // 0x01c: STORE R3, [0xe0]
+4221 // 0x01d: SUB   R2, R2, R1
+8007 // 0x01e: JUMP  0x007
+
+.data
+30 0151
+50 0231
+70 0311
+90 03F1
+B0 04D1
+D0 05B1
+E0 0621
+F0 0000
+F1 0001
+F2 0019
+F3 0003
+F4 0000

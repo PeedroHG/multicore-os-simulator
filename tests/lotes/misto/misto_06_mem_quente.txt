@@ -1,0 +1,34 @@
+// misto_06_mem_quente.txt - Misto: memory-bound com pagina quente
+// Instrucoes estaticas: 18 | executadas: 888 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+.priority 3
+.estimate 888
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+1440 // 0x008: LOAD  R4, [0x40]
+2334 // 0x009: ADD   R3, R3, R4
+3340 // 0x00a: STORE R3, [0x40]
+1441 // 0x00b: LOAD  R4, [0x41]
+2334 // 0x00c: ADD   R3, R3, R4
+3341 // 0x00d: STORE R3, [0x41]
+14A0 // 0x00e: LOAD  R4, [0xa0]
+2334 // 0x00f: ADD   R3, R3, R4
+4221 // 0x010: SUB   R2, R2, R1
+8007 // 0x011: JUMP  0x007
+
+.data
+40 01C1
+41 01C8
+A0 0461
+F0 0000
+F1 0001
+F2 0050
+F3 0003
+F4 0000

@@ -1,0 +1,51 @@
+// mem_10.txt - Memory-bound: varredura de 10 paginas, leitura (grande volume de faltas); 24 iteracoes; paginas de dados [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+// Instrucoes estaticas: 30 | executadas: 560 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+1430 // 0x008: LOAD  R4, [0x30]
+2334 // 0x009: ADD   R3, R3, R4
+1440 // 0x00a: LOAD  R4, [0x40]
+2334 // 0x00b: ADD   R3, R3, R4
+1450 // 0x00c: LOAD  R4, [0x50]
+2334 // 0x00d: ADD   R3, R3, R4
+1460 // 0x00e: LOAD  R4, [0x60]
+2334 // 0x00f: ADD   R3, R3, R4
+1470 // 0x010: LOAD  R4, [0x70]
+2334 // 0x011: ADD   R3, R3, R4
+1480 // 0x012: LOAD  R4, [0x80]
+2334 // 0x013: ADD   R3, R3, R4
+1490 // 0x014: LOAD  R4, [0x90]
+2334 // 0x015: ADD   R3, R3, R4
+14A0 // 0x016: LOAD  R4, [0xa0]
+2334 // 0x017: ADD   R3, R3, R4
+14B0 // 0x018: LOAD  R4, [0xb0]
+2334 // 0x019: ADD   R3, R3, R4
+14C0 // 0x01a: LOAD  R4, [0xc0]
+2334 // 0x01b: ADD   R3, R3, R4
+4221 // 0x01c: SUB   R2, R2, R1
+8007 // 0x01d: JUMP  0x007
+
+.data
+30 0151
+40 01C1
+50 0231
+60 02A1
+70 0311
+80 0381
+90 03F1
+A0 0461
+B0 04D1
+C0 0541
+F0 0000
+F1 0001
+F2 0018
+F3 0003
+F4 0000

@@ -38,7 +38,8 @@ COMMON_SRCS := \
     $(LOADER_DIR)/metrics.cpp \
     $(LOADER_DIR)/parser.cpp \
     $(LOADER_DIR)/ram_loader.cpp \
-    $(LOADER_DIR)/reporter.cpp
+    $(LOADER_DIR)/reporter.cpp \
+    $(LOADER_DIR)/coletor.cpp
 
 # Objetos correspondentes em build/
 COMMON_OBJS := $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(COMMON_SRCS))
@@ -55,7 +56,7 @@ TEST_MULTICORE_BIN := $(BUILD_DIR)/test_multicore
 TEST_METRICAS_BIN  := $(BUILD_DIR)/test_metricas
 TEST_MMU_BIN       := $(BUILD_DIR)/test_mmu
 
-.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore test_metricas test_mmu experimento_e4 benchmark artigo clean help
+.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore test_metricas test_mmu experimento_e4 validar_lotes benchmark artigo clean help
 
 # Target padrão
 all: $(TARGET)
@@ -187,6 +188,10 @@ test_mmu: $(TEST_MMU_BIN)
 experimento_e4: $(TARGET)
 	@tr -d '\r' < scripts/experimento_e4.sh | bash
 
+# Confere os 30 jobs de tests/lotes/ contra o simulador (instrucoes executadas esperadas)
+validar_lotes: $(TARGET)
+	@python3 scripts/validar_lotes.py $(ARGS)
+
 benchmark: $(TARGET)
 	@./scripts/benchmark.sh
 
@@ -240,6 +245,7 @@ help:
 	@echo "  make test_metricas  - Executa os testes de metricas e exportacao CSV"
 	@echo "  make test_mmu       - Executa os testes da MMU (paginacao, FIFO, LRU, write-back)"
 	@echo "  make experimento_e4 - Roda o Experimento E4 (faltas x molduras, FIFO/LRU/OPT)"
+	@echo "  make validar_lotes  - Confere os lotes de tests/lotes/ contra o simulador"
 	@echo "  make benchmark      - Executa bateria de benchmarks multicore"
 	@echo "  make artigo         - Compila o artigo IEEE e salva ./artigo.pdf na raiz"
 	@echo "  make clean          - Remove os binários e diretório de build"

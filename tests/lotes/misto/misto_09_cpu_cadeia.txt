@@ -1,0 +1,30 @@
+// misto_09_cpu_cadeia.txt - Misto: CPU-bound medio-longo (~1000 instr.)
+// Instrucoes estaticas: 17 | executadas: 1108 (HALT incluso)
+// Gerado por scripts/gerar_lotes.py - nao editar a mao.
+.priority 7
+.estimate 1108
+
+8003 // 0x000: JUMP  0x003
+33F4 // 0x001: STORE R3, [0xf4]
+F000 // 0x002: HALT
+10F0 // 0x003: LOAD  R0, [0xf0]
+11F1 // 0x004: LOAD  R1, [0xf1]
+12F2 // 0x005: LOAD  R2, [0xf2]
+13F3 // 0x006: LOAD  R3, [0xf3]
+7201 // 0x007: BEQ   R2, R0 -> 0x001
+2332 // 0x008: ADD   R3, R3, R2
+2431 // 0x009: ADD   R4, R3, R1
+2543 // 0x00a: ADD   R5, R4, R3
+4654 // 0x00b: SUB   R6, R5, R4
+6763 // 0x00c: OR    R7, R6, R3
+5475 // 0x00d: AND   R4, R7, R5
+2334 // 0x00e: ADD   R3, R3, R4
+4221 // 0x00f: SUB   R2, R2, R1
+8007 // 0x010: JUMP  0x007
+
+.data
+F0 0000
+F1 0001
+F2 006E
+F3 0008
+F4 0000
