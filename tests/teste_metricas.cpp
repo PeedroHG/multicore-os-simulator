@@ -77,6 +77,14 @@ static void testarColetorComKernel() {
             CHECK(p.instrucoes == p.ciclosExecucao);   // 1 instrucao por ciclo de execucao
         }
         CHECK(r.resumo.concluidos == 3 && r.resumo.makespan == kernel.getTickGlobal());
+
+        // Timeline: 1 segmento por processo (sem preempcao), sem sobreposicao no mesmo nucleo,
+        // e a soma de cada nucleo fecha com exec + stall (verificarConsistencia ja confere).
+        CHECK(r.timeline.size() == 3);
+        for (const auto& a : r.timeline)
+            for (const auto& b : r.timeline)
+                if (&a != &b && a.nucleo == b.nucleo) CHECK(a.fim <= b.inicio || b.fim <= a.inicio);
+        CHECK(!r.eventos.empty());
     }
 }
 

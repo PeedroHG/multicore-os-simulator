@@ -56,7 +56,7 @@ TEST_MULTICORE_BIN := $(BUILD_DIR)/test_multicore
 TEST_METRICAS_BIN  := $(BUILD_DIR)/test_metricas
 TEST_MMU_BIN       := $(BUILD_DIR)/test_mmu
 
-.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore test_metricas test_mmu experimento_e4 validar_lotes benchmark artigo clean help
+.PHONY: all run test test_ula test_registers test_cpu test_control_unit test_memoria test_cpu_memoria test_multicore test_metricas test_mmu experimento_e4 validar_lotes benchmark graficos checar_graficos artigo clean help
 
 # Target padrão
 all: $(TARGET)
@@ -192,8 +192,26 @@ experimento_e4: $(TARGET)
 validar_lotes: $(TARGET)
 	@python3 scripts/validar_lotes.py $(ARGS)
 
-benchmark: $(TARGET)
-	@./scripts/benchmark.sh
+# Bateria completa (E1, E2, E3, E5, baseline v1, E4) + figuras em output/graficos/.
+# O 'tr' remove CRLF caso o script tenha sido baixado com fim de linha do Windows.
+benchmark: $(TARGET) checar_graficos
+	@mkdir -p $(BUILD_DIR)
+	@tr -d '\r' < scripts/benchmark.sh > $(BUILD_DIR)/benchmark.run.sh
+	@bash $(BUILD_DIR)/benchmark.run.sh
+	@python3 scripts/gerar_graficos.py
+
+# Falha cedo (antes dos benchmarks) se faltar alguma biblioteca dos graficos
+checar_graficos:
+	@python3 -c "import matplotlib, seaborn, pandas, numpy" 2>/dev/null || { \
+		echo "[ERRO] Faltam bibliotecas Python para os graficos (matplotlib, seaborn, pandas, numpy)."; \
+		echo "  Opcao 1: sudo apt install python3-matplotlib python3-seaborn python3-pandas python3-numpy"; \
+		echo "  Opcao 2: python3 -m venv .venv && . .venv/bin/activate && pip install -r scripts/requirements.txt"; \
+		echo "  (depois de ativar o venv, rode 'make benchmark' no mesmo terminal)"; \
+		exit 1; }
+
+# Só regenera as figuras a partir de output/benchmarks e output/experimento_e4
+graficos: checar_graficos
+	@python3 scripts/gerar_graficos.py
 
 # Executa todos os testes
 test: test_registers test_ula test_control_unit test_cpu test_memoria test_cpu_memoria test_multicore test_metricas test_mmu
@@ -246,7 +264,8 @@ help:
 	@echo "  make test_mmu       - Executa os testes da MMU (paginacao, FIFO, LRU, write-back)"
 	@echo "  make experimento_e4 - Roda o Experimento E4 (faltas x molduras, FIFO/LRU/OPT)"
 	@echo "  make validar_lotes  - Confere os lotes de tests/lotes/ contra o simulador"
-	@echo "  make benchmark      - Executa bateria de benchmarks multicore"
+	@echo "  make benchmark      - Roda E1/E2/E3/E5 + baseline v1 + E4 e gera os graficos (output/graficos/)"
+	@echo "  make graficos       - So regenera as figuras (E1-E5) a partir dos resultados existentes"
 	@echo "  make artigo         - Compila o artigo IEEE e salva ./artigo.pdf na raiz"
 	@echo "  make clean          - Remove os binários e diretório de build"
 	@echo "  make help           - Exibe esta mensagem de ajuda"

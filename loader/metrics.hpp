@@ -111,11 +111,21 @@ struct ResumoSistema {
     uint64_t ciclosTroca    = 0;
 };
 
+/// Intervalo [inicio, fim) em que um processo ocupou um nucleo (despacho ate
+/// termino/preempcao). Alimenta timeline.csv e o grafico de ocupacao do E5.
+struct SegmentoOcupacao {
+    int      nucleo = 0;
+    int      pid    = 0;
+    uint64_t inicio = 0;
+    uint64_t fim    = 0;
+};
+
 /// Tudo o que uma execucao produz; entrada do Reporter::exportar().
 struct ResultadoExecucao {
     ConfigExperimento             config;
     std::vector<MetricasProcesso> processos;
     std::vector<MetricasNucleo>   nucleos;
+    std::vector<SegmentoOcupacao> timeline;  // ocupacao dos nucleos (opcional)
     ResumoSistema                 resumo;
     std::vector<std::string>      eventos;  // linhas ja formatadas pelo Kernel (opcional)
 };
