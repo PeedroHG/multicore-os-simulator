@@ -105,6 +105,16 @@ std::string montarProcessosCsv(const ResultadoExecucao& r) {
     return o.str();
 }
 
+std::string montarTimelineCsv(const ResultadoExecucao& r) {
+    std::ostringstream o;
+    o.imbue(std::locale::classic());
+    o << "nucleo,pid,inicio,fim\n";
+    for (const auto& t : r.timeline) {
+        o << t.nucleo << ',' << t.pid << ',' << t.inicio << ',' << t.fim << '\n';
+    }
+    return o.str();
+}
+
 std::string montarNucleosCsv(const ResultadoExecucao& r) {
     std::ostringstream o;
     o.imbue(std::locale::classic());
@@ -286,6 +296,7 @@ bool Reporter::exportar(const std::string& diretorio, const ResultadoExecucao& r
     ok &= gravar(base / "processos.csv", montarProcessosCsv(r));
     ok &= gravar(base / "nucleos.csv",   montarNucleosCsv(r));
     ok &= gravar(base / "resumo.csv",    montarResumoCsv(r));
+    ok &= gravar(base / "timeline.csv",  montarTimelineCsv(r));
     ok &= gravar(base / "execucao.log",  montarLog(r));
     return ok;
 }

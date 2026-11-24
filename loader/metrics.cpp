@@ -175,6 +175,30 @@ std::vector<std::string> Metricas::verificarConsistencia(const ResultadoExecucao
         }
     }
 
+    // Timeline (opcional): a soma dos segmentos de cada nucleo deve cobrir, no minimo,
+    // exec + stall do nucleo e, no maximo, todo o tempo ocupado dele.
+    if (!r.timeline.empty()) {
+        for (const auto& k : r.nucleos) {
+            uint64_t soma = 0;
+            for (const auto& t : r.timeline) {
+                if (t.nucleo != k.id) continue;
+                if (t.fim < t.inicio) {
+                    std::ostringstream m;
+                    m << "Timeline do nucleo " << k.id << ": segmento com fim < inicio";
+                    erros.push_back(m.str());
+                    continue;
+                }
+                soma += t.fim - t.inicio;
+            }
+            if (soma < k.ciclosExecucao + k.ciclosStall || soma > k.ocupado) {
+                std::ostringstream m;
+                m << "Nucleo " << k.id << ": timeline soma " << soma << " ciclos, fora de ["
+                  << (k.ciclosExecucao + k.ciclosStall) << ", " << k.ocupado << "]";
+                erros.push_back(m.str());
+            }
+        }
+    }
+
     auto comparar = [&erros](const char* nome, uint64_t proc, uint64_t nuc) {
         if (proc != nuc) {
             std::ostringstream m;

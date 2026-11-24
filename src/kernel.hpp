@@ -18,6 +18,14 @@ struct ContadoresNucleo {
     uint32_t trocasContexto = 0; ///< despachos em que o PID mudou no núcleo
 };
 
+/** Intervalo em que um processo ocupou um núcleo (despacho até término/preempção). */
+struct SegmentoNucleo {
+    int      nucleo;
+    int      pid;
+    uint64_t inicio;
+    uint64_t fim;
+};
+
 class Kernel {
 private:
     std::vector<CPU> cores;
@@ -29,6 +37,13 @@ private:
     // Métricas por núcleo (Pessoa 4) e último PID despachado em cada núcleo
     std::vector<ContadoresNucleo> contadoresNucleo;
     std::vector<int> ultimoPidNucleo;
+
+    // Linha do tempo de ocupação (E5). segmentoAberto[k] = índice em `segmentos` ou -1.
+    std::vector<SegmentoNucleo> segmentos;
+    std::vector<int> segmentoAberto;
+
+    /** Fecha o segmento aberto do núcleo. Chamar também ao PREEMPTAR (devolver à fila). */
+    void fecharSegmento(int nucleo, uint64_t tick);
 
     // Fila de processos gerenciada pelo Kernel
     std::vector<PCB*> processosProntos;
@@ -52,6 +67,7 @@ public:
     uint64_t getTickGlobal() const { return tickGlobal; }
     const std::vector<CPU>& getCores() const { return cores; }
     const std::vector<ContadoresNucleo>& getContadoresNucleo() const { return contadoresNucleo; }
+    const std::vector<SegmentoNucleo>& getSegmentos() const { return segmentos; }
     std::vector<CPU>& getCores() { return cores; }
 
     // Gerenciamento de processos

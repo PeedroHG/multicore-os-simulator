@@ -14,6 +14,7 @@ Kernel::Kernel(int nCores, uint32_t custoTroca, uint32_t limiteInst)
     }
     contadoresNucleo.assign(numCores, ContadoresNucleo{});
     ultimoPidNucleo.assign(numCores, -1);
+    segmentoAberto.assign(numCores, -1);
 }
 
 void Kernel::admitirProcesso(std::unique_ptr<PCB> pcb) {
@@ -32,12 +33,20 @@ void Kernel::conectarMMU(InterfaceMMU* m) {
     }
 }
 
+void Kernel::fecharSegmento(int nucleo, uint64_t tick) {
+    if (segmentoAberto[nucleo] >= 0) {
+        segmentos[segmentoAberto[nucleo]].fim = tick;
+        segmentoAberto[nucleo] = -1;
+    }
+}
+
 void Kernel::encerrarProcesso(CPU& core, PCB* pcb, EstadoProcesso estadoFinal, uint64_t cicloFim) {
     pcb->estado = estadoFinal;
     pcb->cicloFim = cicloFim;
     if (mmu) {
         mmu->liberarProcesso(*pcb); // devolve as molduras ao terminar/abortar
     }
+    fecharSegmento(static_cast<int>(&core - cores.data()), cicloFim);
     core.desalocarProcesso();
 }
 
@@ -95,6 +104,9 @@ void Kernel::executarPasso() {
                 proximo->trocasContexto++;
             }
             ultimoPidNucleo[i] = proximo->pid;
+
+            segmentos.push_back({i, proximo->pid, tickGlobal, tickGlobal});
+            segmentoAberto[i] = static_cast<int>(segmentos.size()) - 1;
 
             core.restaurarContexto(*proximo);
         }
