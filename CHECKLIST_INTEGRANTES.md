@@ -166,24 +166,24 @@ Este documento reflete fielmente as decisões de projeto e contratos globais fec
   - [x] **Lote Misto:** Conjunto diversificado de jobs variando duração, acessos à memória e diretivas `.priority` e `.estimate`.
 
 ### Fase 3: Automação de Gráficos e Execução dos Benchmarks (até 29/11)
-- [ ] Implementar o script em Python `scripts/gerar_graficos.py` (usando `matplotlib` e `seaborn`):
-  - [ ] **Gráfico E1:** Curvas de Speedup $S(n)$ e Throughput vs número de núcleos ($n \in \{1, 2, 4, 8\}$) comparados contra a linha ideal linear e contra o baseline `v1`.
-  - [ ] **Gráfico E2:** Gráficos de barras de TME e TMR agrupados por política e modo de execução.
-  - [ ] **Gráfico E3:** Curva de Turnaround (TMR) e percentual de sobrecarga de troca de contexto em função do Quantum ($Q$).
-  - [ ] **Gráfico E4:** Curva de Page Faults em função do número de molduras (FIFO vs LRU vs OPT).
-  - [ ] **Gráfico E5:** Distribuição de carga e eficiência por núcleo (diagrama de barras e linha do tempo de ocupação).
-- [ ] Configurar no `Makefile` o alvo `make benchmark` conectando o `scripts/benchmark.sh` ao gerador de gráficos.
+- [x] Implementar o script em Python `scripts/gerar_graficos.py` (usando `matplotlib` e `seaborn`):
+  - [x] **Gráfico E1:** Curvas de Speedup $S(n)$ e Throughput vs número de núcleos ($n \in \{1, 2, 4, 8\}$) comparados contra a linha ideal linear e contra o baseline `v1`.
+  - [x] **Gráfico E2:** Gráficos de barras de TME e TMR agrupados por política e modo de execução.
+  - [x] **Gráfico E3:** Curva de Turnaround (TMR) e percentual de sobrecarga de troca de contexto em função do Quantum ($Q$).
+  - [x] **Gráfico E4:** Curva de Page Faults em função do número de molduras (FIFO vs LRU vs OPT).
+  - [x] **Gráfico E5:** Distribuição de carga e eficiência por núcleo (diagrama de barras e linha do tempo de ocupação).
+- [x] Configurar no `Makefile` o alvo `make benchmark` conectando o `scripts/benchmark.sh` ao gerador de gráficos.
 
 ### Fase 4: Consolidação do Artigo IEEE e Revisão Final (até 05/12)
-- [ ] Configurar o projeto no Overleaf com o **template oficial da IEEE Conference** (`IEEEtran`).
-- [ ] Redigir a **Introdução**:
-  - [ ] Contextualização e objetivos da transição single-core $\rightarrow$ multicore.
-  - [ ] Link do repositório público no GitHub e **instruções exatas de compilação e execução** (`make`, `make test`, `make benchmark`).
-- [ ] Redigir o **Resumo / Abstract** e a **Conclusão**.
-- [ ] Montar e formatar a seção de **Resultados e Discussão**:
-  - [ ] Diagramar e inserir todas as figuras e gráficos em alta resolução gerados pelos scripts.
-  - [ ] Coordenar e revisar os textos analíticos de cada integrante (P1 no E1, P2 no E4, P3 no E2/E3, P4 no E5 e síntese geral).
-- [ ] Realizar a revisão cruzada do texto, padronização de referências bibliográficas (`.bib`) e conformidade com o limite de páginas e regras da IEEE.
+- [x] Configurar o projeto no Overleaf com o **template oficial da IEEE Conference** (`IEEEtran`).
+- [x] Redigir a **Introdução**:
+  - [x] Contextualização e objetivos da transição single-core $\rightarrow$ multicore.
+  - [x] Link do repositório público no GitHub e **instruções exatas de compilação e execução** (`make`, `make test`, `make benchmark`).
+- [x] Redigir o **Resumo / Abstract** e a **Conclusão**.
+- [x] Montar e formatar a seção de **Resultados e Discussão**:
+  - [x] Diagramar e inserir todas as figuras e gráficos em alta resolução gerados pelos scripts.
+  - [x] Coordenar e revisar os textos analíticos de cada integrante (P1 no E1, P2 no E4, P3 no E2/E3, P4 no E5 e síntese geral).
+- [x] Realizar a revisão cruzada do texto, padronização de referências bibliográficas (`.bib`) e conformidade com o limite de páginas e regras da IEEE.
 
 ---
 

@@ -12,14 +12,18 @@ Pessoa 2 (output/experimento_e4/) e gera figuras em PNG (300 dpi) e PDF
     E4  Faltas de pagina x molduras (FIFO, LRU, OPT)
     E5  Eficiencia por nucleo (barras) e linha do tempo de ocupacao (Gantt)
 
-Tambem grava tabelas CSV de apoio (output/graficos/tabelas/) para o texto.
+Tambem grava tabelas CSV de apoio (output/graficos/tabelas/) e, para o artigo,
+copia as figuras em PDF para artigo/figuras/ e gera tabelas LaTeX (E1, E5 e
+descricao dos lotes) em artigo/tabelas/. O artigo as inclui com \\input, entao
+os numeros nunca ficam desatualizados em relacao aos benchmarks.
 
 Uso:  python3 scripts/gerar_graficos.py [--benchmarks DIR] [--e4 DIR] [--saida DIR]
-                                         [--formatos png pdf]
+                                         [--formatos png pdf] [--artigo DIR | --sem-artigo]
 Dependencias: matplotlib, seaborn, pandas, numpy.
 """
 import argparse
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -182,7 +186,7 @@ def grafico_e1(grade, baseline, saida, formatos, tabelas):
     if baseline is not None:
         handles.append(Line2D([0], [0], color="black", linestyle="-.", label="baseline v1 (1 núcleo)"))
     legenda_figura(fig, handles, ncol=min(len(handles), 5), y=-0.07)
-    fig.suptitle("E1 — Speedup e throughput em função do número de núcleos", fontsize=9, y=1.0)
+    # (sem titulo interno: a legenda fica no artigo)
     fig.tight_layout(rect=(0, 0.05, 1, 0.98))
     salvar(fig, "fig_e1_speedup_throughput", saida, formatos)
 
@@ -224,7 +228,7 @@ def grafico_e2(grade, saida, formatos, tabelas):
                 ax.set_ylabel(nome_y if j == 0 else "")
         legenda_figura(fig, [Patch(color="#4c72b0", label="não-preemptivo"),
                              Patch(color="#dd8452", label="preemptivo")], ncol=2, y=-0.03)
-        fig.suptitle(f"E2 — {metrica.upper()} por política e modo de execução", fontsize=9, y=1.0)
+        # (sem titulo interno: a legenda fica no artigo)
         fig.tight_layout(rect=(0, 0.04, 1, 0.98))
         salvar(fig, f"fig_e2_{metrica}", saida, formatos)
     if degenerados:
@@ -277,8 +281,7 @@ def grafico_e3(quantum, saida, formatos, tabelas):
                        marker=marca_custo.get(c, "o"), label=f"custo de troca = {c}")
                 for c in sorted(q["custo"].unique())]
     legenda_figura(fig, handles, ncol=len(handles), y=-0.04)
-    fig.suptitle("E3 — Efeito do quantum no turnaround e na sobrecarga de troca de contexto",
-                 fontsize=9, y=1.0)
+    # (sem titulo interno: a legenda fica no artigo)
     fig.tight_layout(rect=(0, 0.04, 1, 0.98))
     salvar(fig, "fig_e3_quantum", saida, formatos)
 
@@ -314,7 +317,7 @@ def grafico_e4(dir_e4, saida, formatos):
     eixos[0][0].set_ylabel("faltas de página")
     h, l = eixos[0][0].get_legend_handles_labels()
     legenda_figura(fig, h, ncol=3, y=-0.06)
-    fig.suptitle("E4 — Faltas de página em função do número de molduras", fontsize=9, y=1.0)
+    # (sem titulo interno: a legenda fica no artigo)
     fig.tight_layout(rect=(0, 0.06, 1, 0.97))
     salvar(fig, "fig_e4_faltas", saida, formatos)
 
@@ -362,7 +365,7 @@ def grafico_e5_barras(grade, saida, formatos, tabelas, n=4):
             if i == 0:
                 ax.set_title(NOME_LOTE.get(lote, lote))
     legenda_figura(fig, [Patch(color=c, label=o) for c, o in zip(paleta, ordem)], ncol=8, y=-0.04)
-    fig.suptitle(f"E5 — Eficiência por núcleo (n = {n}), por política e modo", fontsize=9, y=1.0)
+    # (sem titulo interno: a legenda fica no artigo)
     fig.tight_layout(rect=(0, 0.04, 1, 0.98))
     salvar(fig, "fig_e5_eficiencia_nucleos", saida, formatos)
 
@@ -400,10 +403,124 @@ def grafico_e5_timeline(grade, saida, formatos, n=4):
             ax.grid(axis="y", visible=False)
         eixos[-1][0].set_xlim(0, fim)
         eixos[-1][0].set_xlabel("ciclos")
-        fig.suptitle(f"E5 — Linha do tempo de ocupação dos núcleos — {NOME_LOTE.get(lote, lote)} "
-                     f"(n = {n}; número = PID)", fontsize=9, y=1.0)
+        # (sem titulo interno: a legenda fica no artigo)
         fig.tight_layout()
         salvar(fig, f"fig_e5_timeline_{lote}", saida, formatos)
+
+
+# ---------------------------------------------------------------------------
+# Exportacao para o artigo (LaTeX)
+# ---------------------------------------------------------------------------
+REF_POL, REF_MODO = "fcfs", "np"   # configuracao de referencia das tabelas do artigo
+
+
+def num(x, casas=1):
+    """Numero com virgula decimal (portugues)."""
+    return f"{x:.{casas}f}".replace(".", ",")
+
+
+def milhar(x):
+    """Inteiro com ponto como separador de milhar (ex.: 15.482)."""
+    return f"{int(round(x)):,}".replace(",", ".")
+
+
+def tex_e1(grade, baseline):
+    """Tabela E1: T(n), S(n), E(n), ganho sobre o baseline v1, throughput e taxa de faltas."""
+    ref = grade[(grade["pol"] == REF_POL) & (grade["modo"] == REF_MODO)]
+    if ref.empty or (ref["n"] == 1).sum() == 0:
+        return None
+    linhas = [r"\begin{tabular}{@{}rrrrrrr@{}}", r"\toprule",
+              r"$n$ & $T(n)$ & $S(n)$ & $E(n)$ & $T_{v1}/T(n)$ & Thr. & Faltas \\", r"\midrule"]
+    primeiro = True
+    for lote in lotes_presentes(ref):
+        sub = ref[ref["lote"] == lote].sort_values("n")
+        t1 = float(sub[sub["n"] == 1].iloc[0]["makespan"])
+        b = None
+        if baseline is not None and lote in set(baseline["lote"]):
+            b = baseline[baseline["lote"] == lote].iloc[0]
+        if not primeiro:
+            linhas.append(r"\midrule")
+        primeiro = False
+        linhas.append(rf"\multicolumn{{7}}{{@{{}}l}}{{\textit{{{NOME_LOTE.get(lote, lote)}}}}} \\")
+        if b is not None:
+            linhas.append(rf"v1 & {milhar(b['makespan'])} & --- & --- & --- & "
+                          rf"{num(b['throughput_por_1000'], 2)} & --- \\")
+        for r in sub.itertuples():
+            ganho = (f"{num(float(b['makespan']) / r.makespan, 2)}" if b is not None else "---")
+            linhas.append(rf"{r.n} & {milhar(r.makespan)} & {num(t1 / r.makespan, 2)} & "
+                          rf"{num(100 * t1 / r.makespan / r.n, 1)}\% & {ganho} & "
+                          rf"{num(r.throughput_por_1000, 2)} & {num(100 * r.taxa_faltas, 1)}\% \\")
+    linhas += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(linhas) + "\n"
+
+
+def tex_e5(grade, n=4):
+    """Tabela E5: eficiencia (ocupado/makespan) e eficiencia util por nucleo, config. de referencia."""
+    nuc = carregar_nucleos(grade[(grade["pol"] == REF_POL) & (grade["modo"] == REF_MODO)], n)
+    if nuc.empty:
+        return None
+    cab = " & ".join(f"N{k}" for k in range(n))
+    linhas = [rf"\begin{{tabular}}{{@{{}}l{'r' * n}rr@{{}}}}", r"\toprule",
+              rf"& {cab} & M\'edia & $\sigma$ (p.p.) \\", r"\midrule"]
+    primeiro = True
+    for lote in lotes_presentes(nuc):
+        sub = nuc[nuc["lote"] == lote].sort_values("nucleo")
+        if not primeiro:
+            linhas.append(r"\midrule")
+        primeiro = False
+        linhas.append(rf"\multicolumn{{{n + 3}}}{{@{{}}l}}{{\textit{{{NOME_LOTE.get(lote, lote)}}}}} \\")
+        for col, nome in (("eficiencia", "Efici\\^encia"), ("eficiencia_util", "Efic. \\'util")):
+            v = list(sub[col])
+            celulas = " & ".join(f"{num(100 * x, 1)}\\%" for x in v)
+            sigma = float(np.std(v, ddof=1)) if len(v) > 1 else 0.0
+            linhas.append(rf"{nome} & {celulas} & {num(100 * np.mean(v), 1)}\% & {num(100 * sigma, 1)} \\")
+    linhas += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(linhas) + "\n"
+
+
+def tex_lotes():
+    """Tabela descritiva dos lotes, a partir de tests/lotes/perfil_esperado.csv."""
+    arq = RAIZ / "tests" / "lotes" / "perfil_esperado.csv"
+    if not arq.exists():
+        return None
+    p = pd.read_csv(arq)
+    linhas = [r"\begin{tabular}{@{}lrrrrr@{}}", r"\toprule",
+              r"Lote & Jobs & Mín. & Máx. & Total & Págs. dados \\", r"\midrule"]
+    for lote in ORDEM_LOTES:
+        sub = p[p["lote"] == lote]
+        if sub.empty:
+            continue
+        ex = sub["instrucoes_executadas"]
+        pg = sub["paginas_dados"]
+        faixa = f"{pg.min()}" if pg.min() == pg.max() else f"{pg.min()}--{pg.max()}"
+        linhas.append(rf"{NOME_LOTE[lote]} & {len(sub)} & {milhar(ex.min())} & {milhar(ex.max())} & "
+                      rf"{milhar(ex.sum())} & {faixa} \\")
+    linhas += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(linhas) + "\n"
+
+
+def exportar_para_artigo(saida, artigo, grade, baseline):
+    """Copia as figuras (PDF) e grava as tabelas LaTeX dentro de artigo/."""
+    figuras = artigo / "figuras"
+    tabelas = artigo / "tabelas"
+    figuras.mkdir(parents=True, exist_ok=True)
+    tabelas.mkdir(parents=True, exist_ok=True)
+    copiadas = 0
+    for pdf in sorted(saida.glob("fig_e*.pdf")):
+        if pdf.name.startswith("fig_e4"):
+            continue            # a figura do E4 e da Pessoa 2 e fica em artigo/
+        shutil.copy2(pdf, figuras / pdf.name)
+        copiadas += 1
+    escritas = []
+    for nome, conteudo in (("tab_e1.tex", tex_e1(grade, baseline) if not grade.empty else None),
+                           ("tab_e5.tex", tex_e5(grade) if not grade.empty else None),
+                           ("tab_lotes.tex", tex_lotes())):
+        if conteudo is None:
+            aviso(f"artigo: tabela {nome} nao gerada (dados ausentes).")
+            continue
+        (tabelas / nome).write_text(conteudo, encoding="utf-8")
+        escritas.append(nome)
+    print(f"[ARTIGO] {copiadas} figura(s) em {figuras}; tabelas {', '.join(escritas)} em {tabelas}")
 
 
 # ---------------------------------------------------------------------------
@@ -413,6 +530,9 @@ def main():
     ap.add_argument("--e4", default=str(RAIZ / "output" / "experimento_e4"))
     ap.add_argument("--saida", default=str(RAIZ / "output" / "graficos"))
     ap.add_argument("--formatos", nargs="+", default=["png", "pdf"])
+    ap.add_argument("--artigo", default=str(RAIZ / "artigo"),
+                    help="pasta do artigo que recebe figuras/ e tabelas/ (padrao: artigo)")
+    ap.add_argument("--sem-artigo", action="store_true", help="nao atualiza a pasta do artigo")
     args = ap.parse_args()
 
     base, dir_e4, saida = Path(args.benchmarks), Path(args.e4), Path(args.saida)
@@ -433,6 +553,9 @@ def main():
     if not grade.empty:
         grafico_e5_barras(grade, saida, args.formatos, tabelas)
         grafico_e5_timeline(grade, saida, args.formatos)
+
+    if not args.sem_artigo and "pdf" in args.formatos:
+        exportar_para_artigo(saida, Path(args.artigo), grade, baseline)
 
     pasta_tab = saida / "tabelas"
     pasta_tab.mkdir(parents=True, exist_ok=True)
