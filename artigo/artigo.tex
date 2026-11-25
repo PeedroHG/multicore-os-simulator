@@ -12,6 +12,14 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows, positioning}
 
+% Figuras e tabelas geradas por `make graficos` (scripts/gerar_graficos.py)
+\graphicspath{{figuras/}{./}}
+% Marcador visivel para o que ainda depende de outras partes do trabalho
+\newcommand{\pendente}[1]{\textcolor{red}{\textbf{[PENDENTE: #1]}}}
+% Inclui uma tabela gerada automaticamente (ou avisa que ela nao existe)
+\newcommand{\tabelaauto}[1]{\IfFileExists{tabelas/#1.tex}{\input{tabelas/#1.tex}}%
+  {\pendente{rode \texttt{make benchmark} para gerar \texttt{\detokenize{tabelas/#1.tex}}}}}
+
 \begin{document}
 
 \title{Simulador de Arquitetura Multicore com Gerenciamento de Memória Paginada e Escalonamento Dinâmico de Tarefas}
@@ -31,45 +39,56 @@
     \and
     \IEEEauthorblockN{Otávio Hiratsuka}
     \IEEEauthorblockA{\textit{DECOM-DV / CEFET-MG} \\
-    Divinópolis, Brasil}
+    otaviohiratsukac@gmail.com}
 }
 
 \maketitle
 
 \begin{abstract}
-[A SER ESCRITO PELA PESSOA 4] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Repositório: \url{https://github.com/PeedroHG/multicore-os-simulator}.
+Este trabalho apresenta um simulador de arquitetura multicore em C++17 que estende um baseline single-core de 16 bits com $n$ núcleos em passo sincronizado (\textit{lockstep}), memória virtual paginada sob demanda com substituição global FIFO e LRU, quatro políticas de escalonamento (FCFS, SJN, \textit{Round Robin} e Prioridade com \textit{aging}) em modos não-preemptivo e preemptivo, e coleta formal de métricas (tempos médios de espera e de retorno, utilização, eficiência por núcleo, \textit{throughput} e \textit{speedup}). A avaliação usa três lotes reprodutíveis de 10 programas (CPU-bound, memory-bound e misto) e cinco experimentos, comparados ao baseline single-core. No lote CPU-bound, o \textit{speedup} chega a 3,41 com 8 núcleos (eficiência de 42,6\%), limitado pelo job mais longo, que sozinho responde por 26,2\% do trabalho total. No lote memory-bound ocorre \textit{thrashing}: com 4 núcleos a taxa de faltas de página sobe de 0,8\% para 18,9\% e o \textit{speedup} cai para 0,31. Com poucas molduras, o LRU reduz em até 26,6\% as faltas do FIFO, e o algoritmo ótimo de Belady indica a margem restante. \pendente{frase final com o resultado da comparação entre as quatro políticas (E2 e E3)} Repositório: \url{https://github.com/PeedroHG/multicore-os-simulator}.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Sistemas Operacionais, Multicore, Troca de Contexto, PCB, Lockstep, Amdahl.
+Sistemas Operacionais, Multicore, Escalonamento, Memória Virtual, Paginação, Lockstep, Speedup, Amdahl.
 \end{IEEEkeywords}
 
 \section{Introdução}
-% [Seção sob responsabilidade de Otávio Hiratsuka]
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+\label{sec:intro}
+O desempenho dos computadores atuais deixou de depender do aumento da frequência de um único núcleo e passou a depender do paralelismo entre vários núcleos que compartilham a mesma memória principal~\cite{hennessy2017}. Isso transfere ao sistema operacional duas responsabilidades centrais: decidir qual tarefa ocupa cada núcleo e por quanto tempo (escalonamento) e administrar um recurso escasso e compartilhado, a memória física (memória virtual)~\cite{tanenbaum2015,silberschatz2018}. Os dois problemas interagem: colocar muitos processos em execução simultânea eleva a pressão sobre a memória e pode produzir \textit{thrashing}~\cite{denning1968}, enquanto uma política de substituição ineficaz paralisa os núcleos e anula o ganho do paralelismo, que já é limitado pela fração do trabalho que não pode ser dividida~\cite{amdahl1967}.
 
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.
+Este artigo descreve e avalia um simulador multicore determinístico que expande um baseline single-core de arquitetura RISC de 16 bits. O sistema lê um lote fechado de programas (nenhuma admissão ocorre após $t = 0$) e o executa até a conclusão em $n$ núcleos que compartilham uma única memória. As contribuições são:
+\begin{itemize}
+    \item um Kernel com relógio central em passo sincronizado, que garante reprodutibilidade exata dos experimentos (Seção~\ref{sec:arq});
+    \item uma MMU com paginação sob demanda, substituição FIFO e LRU e um oráculo offline (OPT de Belady) para avaliação (Seção~\ref{sec:mem});
+    \item quatro políticas de escalonamento em dois modos de execução (Seção~\ref{sec:esc});
+    \item coleta formal de métricas exportada em CSV, três lotes de teste gerados de forma reprodutível e uma bateria automatizada de cinco experimentos, com comparação ao baseline single-core (Seções~\ref{sec:met} e~\ref{sec:res}).
+\end{itemize}
+A Seção~\ref{sec:conc} resume as conclusões e os trabalhos futuros.
 
 \subsection{Repositório e Instruções de Compilação}
-O código-fonte completo e modular do projeto está hospedado publicamente no repositório GitHub:\\
+O código-fonte completo, modular e comentado está hospedado no repositório público:\\
 \centerline{\url{https://github.com/PeedroHG/multicore-os-simulator}}
 
-Para a compilação e execução do simulador em ambiente GNU/Linux, utiliza-se a ferramenta Make sobre o padrão C++17:
+\textbf{Requisitos.} GNU/Linux, \texttt{g++} com suporte a C++17 e GNU Make. Para os gráficos, Python~3 com \texttt{matplotlib}, \texttt{seaborn}, \texttt{pandas} e \texttt{numpy} (\texttt{pip install -r scripts/requirements.txt}). Para este artigo, \texttt{pdflatex} e \texttt{bibtex}. As instruções a seguir reproduzem os resultados apresentados:
+\begin{footnotesize}
 \begin{verbatim}
-# 1. Compilação do executável principal
-make
-
-# 2. Execução parametrizada do simulador
-./simulador --cores 4 --politica rr --modo p
-
-# 3. Execução da suíte completa de testes
-make test
-
-# 4. Execução da bateria de benchmarks
-make benchmark
+git clone https://github.com/PeedroHG/
+        multicore-os-simulator
+cd multicore-os-simulator
+make                # compila ./simulador
+make test           # todas as suítes de teste
+./simulador --cores 4 --politica rr \
+  --modo p --quantum 10 --saida output/ex \
+  tests/lotes/cpu_bound/*.txt
+make validar_lotes  # confere os 30 jobs
+make benchmark      # E1-E5, baseline, figuras
+make artigo         # compila este artigo
 \end{verbatim}
+\end{footnotesize}
+As opções do simulador são \texttt{--cores}, \texttt{--politica} (\texttt{fcfs}, \texttt{sjn}, \texttt{rr}, \texttt{prio}), \texttt{--modo} (\texttt{np}, \texttt{p}), \texttt{--quantum}, \texttt{--substituicao} (\texttt{fifo}, \texttt{lru}), \texttt{--molduras}, \texttt{--penalidade-falta}, \texttt{--custo-troca}, \texttt{--aging} e \texttt{--saida}. Cada execução grava em \texttt{--saida} os arquivos \texttt{processos.csv}, \texttt{nucleos.csv}, \texttt{resumo.csv}, \texttt{timeline.csv} e \texttt{execucao.log}. Como a simulação é determinística, os mesmos parâmetros e programas reproduzem exatamente os mesmos arquivos.
 
 \section{Arquitetura Multicore e Modelo de Execução}
+\label{sec:arq}
 % [Seção sob responsabilidade de Pedro Henrique Galvão]
 O sistema foi estruturado com um Kernel centralizado, responsável pelo despacho e controle de tempo de $n$ núcleos de processamento idênticos ($\text{CPU}_0, \text{CPU}_1, \dots, \text{CPU}_{n-1}$). Todos os núcleos compartilham a mesma memória principal, cujo espaço físico é dividido entre a área reservada do sistema operacional (endereços $0\text{x}0000$ a $0\text{x}01\text{FF}$) e a área dos programas de usuário.
 
@@ -78,10 +97,10 @@ Para afastar condições de corrida não-determinísticas inerentes à manipula�
 
 O Kernel gerencia o relógio central do sistema através do contador \texttt{tickGlobal}. Em cada pulso de clock ($t \to t + 1$), o Kernel percorre os núcleos de $0$ a $n-1$:
 \begin{enumerate}
-    \item Incrementa o tempo de espera ($\text{ciclosEspera}$) de todos os processos que permanecem na fila de aptos (\texttt{PRONTO});
     \item Para núcleos em estolagem de memória, consome 1 ciclo de latência de E/S sem despachar instrução;
     \item Para núcleos desocupados, aciona o despachante para alocar o próximo processo da fila;
-    \item Para núcleos com processo ativo, dispara o ciclo elementar de instrução ($\text{CPU::step()}$), atualizando registradores e o contador de quantum.
+    \item Para núcleos com processo ativo, dispara o ciclo elementar de instrução ($\text{CPU::step()}$), atualizando registradores e o contador de quantum;
+    \item Ao final do pulso, incrementa o tempo de espera ($\text{ciclosEspera}$) apenas dos processos que continuam na fila de aptos (\texttt{PRONTO}); o processo despachado neste pulso já executou e não espera.
 \end{enumerate}
 
 \subsection{Bloco de Controle de Processo (PCB)}
@@ -160,6 +179,7 @@ O fluxo operacional do Kernel e a interação síncrona entre núcleos, despacha
 \end{figure}
 
 \section{Gerenciamento de Memória Virtual}
+\label{sec:mem}
 % [Seção sob responsabilidade de João Paulo: Fatiamento em 16 palavras, MMU, Tabela de Molduras, FIFO e LRU]
 
 Embora o enunciado empregue a expressão ``memória segmentada'', os mecanismos prescritos --- divisão do espaço em blocos de tamanho fixo combinados a deslocamento (\textit{offset}) e substituição por FIFO ou LRU --- caracterizam formalmente a \textbf{paginação sob demanda} no modelo clássico de Tanenbaum~\cite{tanenbaum2015}. Para viabilizar a multiprogramação sem colisão de endereços entre núcleos, a Unidade de Controle (UC) foi desacoplada da memória física: o Contador de Programa ($PC$) de todo processo inicia em $0\text{x}000$, a soma estática de \texttt{OS\_RESERVED\_MEM} ($512$) foi eliminada das instruções \texttt{LOAD}, \texttt{STORE}, \texttt{BEQ} e \texttt{JUMP}, e todos os acessos --- inclusive a busca de instruções (\textit{fetch}) --- são interceptados pela Unidade de Gerenciamento de Memória (MMU).
@@ -254,14 +274,75 @@ O fluxo completo de tradução de endereços, detecção de faltas e substituiç
 \end{figure}
 
 \section{Políticas de Escalonamento de Tarefas}
+\label{sec:esc}
 % [Seção sob responsabilidade de Igor Peixoto: FCFS, SJN, RR, Prioridade + Aging e Pseudocódigos Formais]
 
 \section{Metodologia Experimental e Cargas de Teste}
-% [Seção sob responsabilidade de Otávio Hiratsuka: Lotes CPU-bound, Memory-bound e Misto]
+\label{sec:met}
+
+\subsection{Ambiente e Parâmetros}
+Todos os experimentos usam o mesmo executável em passo sincronizado, o que torna cada execução determinística: parâmetros e programas idênticos produzem arquivos de saída idênticos, e por isso cada configuração é executada uma única vez. A variabilidade entre cenários vem da escolha da carga e dos parâmetros, não de ruído de medição. Salvo indicação contrária, adotam-se $M = 16$ molduras de usuário, substituição FIFO, quantum $Q = 10$ ciclos, $C_{\text{troca}} = 5$, $C_{\text{falta}} = 50$ e intervalo de \textit{aging} de 50 ciclos. O número de núcleos varia em $n \in \{1, 2, 4, 8\}$.
+
+\subsection{Cargas de Trabalho}
+Foram construídos três lotes de 10 programas em Assembly RISC de 16 bits, resumidos na Tabela~\ref{tab:lotes}.
+
+\begin{table}[htbp]
+\caption{Lotes de teste: instruções executadas por job (mínimo, máximo e total) e páginas de dados, incluindo a página de variáveis de controle.}
+\label{tab:lotes}
+\centering
+\footnotesize
+\tabelaauto{tab_lotes}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{CPU-bound:} laços de 25 a 600 iterações de operações aritméticas e lógicas (\texttt{ADD}, \texttt{SUB}, \texttt{AND}, \texttt{OR}) sobre registradores, com 1 a 2 páginas de código e uma de dados. Quase não acessam a memória, e as durações variam de 248 a 3.908 instruções;
+    \item \textbf{Memory-bound:} cada iteração do laço percorre de 2 a 10 páginas de dados distintas, espalhadas entre os endereços \texttt{0x30} e \texttt{0xEF}, em padrões cíclicos, de página quente e de varredura, com e sem escrita (\texttt{STORE}) para provocar \textit{write-backs}. Executam poucas instruções (368 a 1.178), mas o tempo é dominado por faltas de página;
+    \item \textbf{Misto:} dez programas de duração (6 a 2.608 instruções) e comportamento variados, que combinam laços de CPU, laços sobre memória e dois programas de linha reta. Cada um declara as diretivas \texttt{.priority} (maior valor, maior prioridade) e \texttt{.estimate}. As prioridades são inversas ao tamanho: os jobs longos recebem prioridade alta e os curtos, baixa, de modo que a política por Prioridade difira da SJN e o \textit{aging} se torne necessário para evitar inanição.
+\end{itemize}
+
+Os arquivos não são escritos à mão. O script \texttt{scripts/gerar\_lotes.py} monta cada programa, verifica as restrições da ISA --- por exemplo, o alvo do \texttt{BEQ} só alcança a página indicada pelo registrador comparado, o que exige um desvio inicial (trampolim) para o epílogo --- e simula o job para obter o número exato de instruções executadas, gravado em \texttt{.estimate} e em \texttt{perfil\_esperado.csv}. O comando \texttt{make validar\_lotes} executa os 30 jobs no simulador e confere cada contagem.
+
+\subsection{Métricas}
+Todos os processos chegam em $t = 0$. Sejam $N$ o número de processos, $\text{fim}_i$ o ciclo de término do processo $i$ e $T = \max_i \text{fim}_i$ o \textit{makespan}. O tempo de espera $\text{TE}_i$ conta os ciclos em \texttt{PRONTO}, sem incluir \textit{stall} nem troca de contexto. Os tempos médios de espera e de retorno são
+\begin{equation}
+\text{TME} = \frac{1}{N}\sum_{i=1}^{N} \text{TE}_i, \qquad \text{TMR} = \frac{1}{N}\sum_{i=1}^{N} \text{fim}_i .
+\end{equation}
+Para o núcleo $k$, com $\text{exec}_k$, $\text{stall}_k$ e $\text{troca}_k$ ciclos de execução, de espera por memória e de troca de contexto, a eficiência e a eficiência útil são
+\begin{equation}
+E_k = \frac{\text{exec}_k + \text{stall}_k + \text{troca}_k}{T}, \qquad E^{u}_k = \frac{\text{exec}_k}{T}.
+\end{equation}
+A utilização média $U$ e a utilização útil $U^{u}$ são as médias de $E_k$ e de $E^{u}_k$ sobre os $n$ núcleos, e o \textit{throughput} é $X = 1000\,N/T$ (processos por mil ciclos). Um núcleo parado em \textit{stall} está ocupado, mas não produz trabalho; por isso $E_k$ e $E^{u}_k$ são reportadas juntas.
+
+\subsection{Experimentos e Baseline}
+A Tabela~\ref{tab:exp} resume os cinco experimentos. O E4 usa o lote dedicado de 6 processos descrito na Seção~\ref{sec:res}; os demais usam os três lotes acima.
+
+\begin{table}[htbp]
+\caption{Desenho dos experimentos.}
+\label{tab:exp}
+\centering
+\footnotesize
+\begin{tabular}{@{}lp{4.5cm}l@{}}
+\toprule
+\textbf{Exp.} & \textbf{Fatores variados} & \textbf{Métricas} \\
+\midrule
+E1 & $n \in \{1,2,4,8\}$; 3 lotes; 4 políticas; 2 modos & $T$, $S$, $E$, $X$ \\
+E2 & política $\times$ modo; $n \in \{1,4\}$ & TME, TMR \\
+E3 & $Q \in \{2,5,10,20,50,100\}$; $C_{\text{troca}} \in \{0,5\}$; RR e Prioridade; $n=2$ & TMR, \% troca \\
+E4 & $M \in \{4,\dots,32\}$; FIFO, LRU, OPT; $n \in \{1,4\}$ & faltas \\
+E5 & política $\times$ modo; $n=4$ & $E_k$, $E^u_k$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+O baseline (v1) é o simulador single-core original: executa um programa por vez, em sequência, sem paginação (cada job é carregado inteiro e executado até o \texttt{HALT}), com 1 ciclo por acesso à RAM e 50 ciclos por setor lido do disco. Seu tempo total para um lote é a soma dos tempos dos jobs, e seu \textit{throughput} é $1000\,N / \sum_i T_i$. Para separar o efeito do paralelismo do efeito do novo modelo de memória, o E1 inclui também o simulador atual com $n = 1$; a razão $T_{v1}/T(1)$ mede o custo da paginação sob demanda.
 
 \section{Resultados e Discussão}
+\label{sec:res}
+
+Esta seção apresenta os resultados dos cinco experimentos descritos na Seção~\ref{sec:met}. Os números citados no texto provêm de \texttt{output/benchmarks} e das tabelas geradas em \texttt{artigo/tabelas}, regeneráveis com \texttt{make benchmark}.
 
 \subsection{Análise de Speedup e Escalabilidade Multicore (Experimento E1)}
+\label{sec:e1}
 A quantificação do ganho advindo da paralelização física do hardware toma como referência a formulação clássica da Lei de Amdahl~\cite{amdahl1967}. O Speedup $S(n)$ sobre $n$ núcleos de processamento é mensurado comparando o makespan (tempo total de conclusão do lote) obtido na configuração uniprocessada $T(1)$ contra a execução paralela em $n$ núcleos $T(n)$:
 \begin{equation}
 S(n) = \frac{T(1)}{T(n)}
@@ -272,7 +353,43 @@ A eficiência paralela normalizada $E(n)$, que traduz a fração de hardware efe
 E(n) = \frac{S(n)}{n} \times 100\%
 \end{equation}
 
-% [Os gráficos comparativos e a discussão aprofundada dos resultados serão inseridos após a execução completa dos benchmarks com os lotes finais de teste.]
+\textbf{Resultados.} A Tabela~\ref{tab:e1} e a Figura~\ref{fig:e1} resumem o E1 para FCFS não-preemptivo, configuração de referência; a figura traz as oito combinações de política e modo. \pendente{as curvas das oito combinações coincidem enquanto o escalonador não estiver integrado ao Kernel; revisar esta frase e a figura depois da integração}
+
+\begin{table}[htbp]
+\caption{E1: tempo total $T(n)$ em ciclos, speedup $S(n)$, eficiência $E(n)$, ganho sobre o baseline v1 ($T_{v1}/T(n)$), throughput (processos por mil ciclos) e taxa de faltas de página (FCFS, não-preemptivo, $M = 16$).}
+\label{tab:e1}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\tabelaauto{tab_e1}
+\end{table}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_e1_speedup_throughput.pdf}
+\caption{E1: speedup $S(n)$ (acima, com a linha de speedup ideal) e throughput (abaixo, com o baseline v1) em função do número de núcleos, para cada lote.}
+\label{fig:e1}
+\end{figure*}
+
+No lote CPU-bound, o \textit{speedup} cresce de 1,86 ($n = 2$, $E = 92{,}9\%$) para 2,79 ($n = 4$) e 3,41 ($n = 8$, $E = 42{,}6\%$), e o \textit{throughput} passa de 0,65 para 2,20 processos por mil ciclos, ou 3,26 vezes o do baseline v1 com 8 núcleos. A saturação não decorre de uma fração serial de código, mas da indivisibilidade dos processos: nenhum job pode ser repartido entre núcleos, de modo que $T(n) \ge \max\{\sum_i T_i / n,\ \max_i T_i\}$. O maior job (4.058 ciclos: 3.908 instruções mais 3 faltas de página) responde por $f = 4.058/15.482 = 26{,}2\%$ do trabalho total, o que impõe, como na formulação de Amdahl~\cite{amdahl1967}, $S(n) \le 1/f \approx 3{,}8$. O valor medido com 8 núcleos corresponde a 89\% desse teto, e o restante se deve, em parte, ao aumento das faltas de página (de 25 para 41) causado pela disputa das 16 molduras por oito processos simultâneos.
+
+O lote memory-bound mostra o oposto. O \textit{speedup} é 1,47 com $n = 2$, mas despenca para 0,31 com $n = 4$ e 0,39 com $n = 8$: o simulador paralelo passa a ser até 3,3 vezes mais lento que o baseline. A causa é \textit{thrashing}~\cite{denning1968}: a taxa de faltas sobe de 0,8\% ($n = 1$) e 1,4\% ($n = 2$) para 18,9\% ($n = 4$) e 30,7\% ($n = 8$), e os \textit{write-backs} passam de 0 e 6 para 500 e 667. Com substituição global sobre 16 molduras, a soma dos conjuntos de trabalho dos processos simultâneos (3 a 11 páginas de dados mais o código de cada um) excede a RAM, e um processo expulsa as páginas do outro. A lei de Amdahl não prevê esse comportamento, porque o recurso que se serializa é o conjunto de molduras, e não o código. As métricas de utilização expõem o problema: com $n = 4$, a utilização média dos núcleos é de 90,5\%, mas a utilização útil é de apenas 4,8\%, pois os núcleos estão ocupados quase sempre em \textit{stall}.
+
+Com $n = 1$, o simulador atual fica entre 3\% e 5\% acima do baseline em tempo ($T_{v1}/T(1) = 0{,}95$ e $0{,}97$), o que indica que a paginação sob demanda tem custo pequeno e que os ganhos e perdas acima se devem ao paralelismo e à disputa por memória. \pendente{discussão do lote misto (depende do parser de \texttt{.priority} e \texttt{.estimate}); a Tabela~\ref{tab:e1} já o inclui automaticamente quando ele é executado}
+
+\subsection{Comparação entre Políticas de Escalonamento (Experimento E2)}
+O E2 compara FCFS, SJN, RR e Prioridade, nos modos não-preemptivo e preemptivo, quanto ao TME e ao TMR, com $n = 1$ e $n = 4$. Para um lote fechado e estático, a teoria antecipa resultados bem definidos: a regra do menor tempo de processamento primeiro (SJN) minimiza o tempo médio de retorno em um único processador~\cite{smith1956}, ao custo de adiar os jobs longos; o RR tende a elevar o TMR quando os jobs têm durações semelhantes, pois todos terminam próximos uns dos outros, em troca de uma distribuição mais uniforme da espera~\cite{silberschatz2018}; e a Prioridade pode causar inanição dos jobs de baixa prioridade, o que o \textit{aging} mitiga. No lote misto, as prioridades inversas ao tamanho tornam esse efeito mensurável.
+
+\pendente{inserir as figuras \texttt{fig\_e2\_tme} e \texttt{fig\_e2\_tmr} (já geradas em \texttt{artigo/figuras}) e a discussão numérica depois da integração do escalonador ao Kernel; hoje as barras saem idênticas entre as políticas, e o script de gráficos emite um aviso}
+
+\subsection{Efeito do Quantum e do Custo de Troca (Experimento E3)}
+No modo preemptivo, o quantum $Q$ define o compromisso entre reatividade e sobrecarga. Cada preempção que troca o processo no núcleo custa $C_{\text{troca}}$ ciclos; no pior caso, em que todo quantum termina em troca, a fração do tempo gasta em administração é
+\begin{equation}
+\omega(Q) = \frac{C_{\text{troca}}}{Q + C_{\text{troca}}},
+\end{equation}
+que, com $C_{\text{troca}} = 5$, vale 71\% para $Q = 2$, 50\% para $Q = 5$, 33\% para $Q = 10$, 20\% para $Q = 20$, 9\% para $Q = 50$ e 5\% para $Q = 100$. É o mesmo raciocínio da análise clássica de Tanenbaum~\cite{tanenbaum2015}: quanta curtos desperdiçam CPU, e quanta longos pioram a resposta. O E3 mede o TMR e a sobrecarga efetiva (ciclos de troca sobre ciclos ocupados) para RR e Prioridade, com $n = 2$ e $C_{\text{troca}} \in \{0, 5\}$, e compara a curva medida com $\omega(Q)$.
+
+\pendente{inserir a figura \texttt{fig\_e3\_quantum} e os resultados quando o Kernel cobrar o custo de troca de contexto; hoje \texttt{ciclos\_troca} = 0 em todas as execuções e a sobrecarga medida é nula}
 
 \subsection{Desempenho da Paginação: FIFO vs. LRU vs. OPT e Anomalia de Belady (Experimento E4)}
 % [Análise do Experimento E4 sob responsabilidade de João Paulo (Pessoa 2)]
@@ -315,9 +432,37 @@ A análise dos dados experimentais e da curva apresentada na Figura~\ref{fig:e4_
 \label{fig:e4_faltas}
 \end{figure}
 
+\subsection{Distribuição de Carga entre Núcleos (Experimento E5)}
+O E5 examina como o trabalho se distribui entre $n = 4$ núcleos. A Tabela~\ref{tab:e5} traz a eficiência $E_k$ e a eficiência útil $E^u_k$ por núcleo na configuração de referência, e a Figura~\ref{fig:timeline} mostra a linha do tempo de ocupação do lote CPU-bound.
+
+\begin{table}[htbp]
+\caption{E5: eficiência por núcleo com $n = 4$ (FCFS, não-preemptivo); $\sigma$ é o desvio padrão entre os núcleos, em pontos percentuais.}
+\label{tab:e5}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\tabelaauto{tab_e5}
+\end{table}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.78\textwidth]{fig_e5_timeline_cpu_bound.pdf}
+\caption{E5: linha do tempo de ocupação dos núcleos no lote CPU-bound ($n = 4$); o número em cada bloco é o PID.}
+\label{fig:timeline}
+\end{figure*}
+
+No lote CPU-bound, a eficiência varia de 43,6\% a 100\% ($\sigma = 27{,}6$ p.p.): os núcleos 0 e 2 terminam cedo (em 2.744 e 2.416 ciclos) e ficam ociosos enquanto o núcleo 1 trabalha até o fim (5.546 ciclos). A linha do tempo mostra a causa. Sob FCFS, os jobs seguem a ordem de chegada ao primeiro núcleo livre, e o job mais longo (PID 10), por ser o último da fila, só é despachado quando o núcleo 1 se libera, por volta do ciclo 1.500, e define sozinho o \textit{makespan}. É o efeito de cauda típico do escalonamento em lista~\cite{graham1966}. O \textit{makespan} obtido (5.546) é 1,37 vez o limite inferior $\max\{\lceil \sum_i T_i/n \rceil,\ \max_i T_i\} = 4.058$, dentro do teto $2 - 1/n = 1{,}75$ que Graham garante para qualquer escalonamento em lista; ordenar os jobs do maior para o menor (LPT) reduziria esse teto a $4/3 - 1/(3n) \approx 1{,}25$~\cite{graham1969}.
+
+No lote memory-bound, a eficiência média é alta (90,5\%), mas a eficiência útil é de apenas 4,8\%, pois quase todo o tempo dos núcleos é \textit{stall} (Seção~\ref{sec:e1}). A distribuição de carga é razoável ($\sigma = 16{,}4$ p.p.), e o gargalo é a memória, não o balanceamento. \pendente{comparar o balanceamento entre as quatro políticas e os dois modos depois da integração do escalonador (figura \texttt{fig\_e5\_eficiencia\_nucleos})}
+
+\subsection{Ameaças à Validade e Limitações}
+Quatro limitações condicionam a interpretação dos resultados. Primeiro, a simulação é determinística e cada configuração roda uma única vez, o que dispensa intervalos de confiança, mas torna as conclusões dependentes dos lotes escolhidos: são apenas 10 programas sintéticos por lote, e os resultados não se generalizam sem ressalvas a cargas reais. Segundo, o lote é fechado (sem chegadas durante a execução), de modo que a preempção só ocorre por fim de quantum e o SJN preemptivo coincide com o SJN não-preemptivo. Terceiro, o modelo de custos é simples: penalidades fixas de 50 e 5 ciclos, 1 ciclo por acesso à RAM, falta de página tratada por \textit{stall} em vez de bloqueio, sem TLB nem \textit{cache}. Quarto, o baseline v1 usa outro modelo de memória (sem paginação), e a comparação com ele deve ser lida junto com a razão $T_{v1}/T(1)$ da Tabela~\ref{tab:e1}.
+
 \section{Conclusão}
-% [Seção sob responsabilidade de Otávio Hiratsuka]
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+\label{sec:conc}
+Este trabalho apresentou um simulador multicore determinístico com paginação sob demanda, quatro políticas de escalonamento em dois modos e coleta formal de métricas, avaliado com lotes reprodutíveis e comparado a um baseline single-core. Três conclusões se destacam. Primeiro, o ganho do paralelismo é limitado pela estrutura da carga: no lote CPU-bound, o \textit{speedup} de 3,41 com 8 núcleos corresponde a 89\% do teto de 3,8 imposto pelo job mais longo, e a linha do tempo mostra que a ordem de despacho decide o \textit{makespan}. Segundo, a memória é o recurso crítico: no lote memory-bound, acrescentar núcleos piorou o desempenho (\textit{speedup} de 0,31 com 4 núcleos), porque a soma dos conjuntos de trabalho excedeu as 16 molduras e causou \textit{thrashing}; nesse regime, a utilização média dos núcleos (90,5\%) engana, e a utilização útil (4,8\%) é a métrica que revela o problema. Terceiro, a política de substituição importa quando a memória é escassa: o LRU reduziu em até 26,6\% as faltas do FIFO, e o OPT de Belady mostrou a margem que políticas causais não alcançam. \pendente{parágrafo com a conclusão sobre as quatro políticas de escalonamento e o efeito do quantum (E2 e E3), depois da integração do escalonador}
+
+Como trabalhos futuros, destacam-se a admissão dinâmica de processos, um estado \texttt{BLOQUEADO} com E/S assíncrona, a inclusão de TLB e \textit{cache} no modelo de custos, a substituição de páginas com alocação local por processo para conter o \textit{thrashing} e o escalonamento com afinidade de núcleo.
 
 \bibliographystyle{IEEEtran}
 \bibliography{referencias}
